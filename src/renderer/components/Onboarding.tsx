@@ -102,7 +102,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       <div className="onboarding-card">
         {step === 'welcome' && (
           <div className="onboarding-step">
-            <img src={isDark ? './nudge_logo_cropped_dark.png' : './nudge_logo_cropped.png'} alt="Nudge" className="onboarding-logo" />
+            <img src='./nudge_logo_cropped.png' alt="Nudge" className="onboarding-logo" />
             <h1 className="onboarding-heading">Welcome to Nudge</h1>
             <p className="onboarding-text">
               A gentle productivity companion for ADHD brains.

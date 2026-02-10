@@ -66,7 +66,7 @@ export default function ChatPanel({
         {isEmpty ? (
           <div className="chat-panel-empty">
             <div className="chat-panel-empty-logo">
-              <img src={isDark ? './icon_sm_dark.png' : './icon_sm.png'} alt="Nudge" width="56" height="56" />
+              <img src='./icon_sm.png' alt="Nudge" width="56" height="56" />
             </div>
             <h2 className="chat-panel-empty-title">What would you like to work on?</h2>
             <div className="chat-panel-empty-chips">

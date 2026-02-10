@@ -7,15 +7,15 @@ files:
   - dist-electron/**
 extraResources:
   - default-vault/**
-icon: icon_sm.png
+icon: icon.png
 mac:
   target:
     - dmg
     - dir
   category: public.app-category.productivity
-  icon: icon_sm.png
+  icon: icon.png
 win:
   target: nsis
-  icon: icon_sm.png
+  icon: icon.png
 linux:
   target: AppImage
