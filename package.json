@@ -1,5 +1,6 @@
 {
   "name": "nudge",
+  "productName": "Nudge",
   "version": "0.1.0",
   "description": "An ADHD-aware desktop app for managing ideas and daily planning through conversational AI",
   "main": "dist-electron/main.js",
