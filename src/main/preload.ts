@@ -15,12 +15,12 @@ contextBridge.exposeInMainWorld('nudge', {
     sendMessage: (
       messages: any[],
       systemPrompt: string,
+      provider: string,
       model: string,
       onChunk: (chunk: string) => void,
       onDone: () => void,
       onError: (error: string) => void
     ) => {
-      // Set up listeners
       const chunkHandler = (_event: any, chunk: string) => onChunk(chunk);
       const doneHandler = () => {
         cleanup();
@@ -46,21 +46,23 @@ contextBridge.exposeInMainWorld('nudge', {
       ipcRenderer.on('api:stream-error', errorHandler);
       ipcRenderer.on('api:tool-use', toolHandler);
 
-      ipcRenderer.invoke('api:send-message', messages, systemPrompt, model);
+      ipcRenderer.invoke('api:send-message', messages, systemPrompt, provider, model);
 
-      // Return cancel function
       return () => {
         cleanup();
         ipcRenderer.invoke('api:cancel-stream');
       };
     },
-    validateKey: (key: string) => ipcRenderer.invoke('api:validate-key', key),
+    validateKey: (provider: string, key: string, baseUrl?: string) =>
+      ipcRenderer.invoke('api:validate-key', provider, key, baseUrl),
   },
   settings: {
     get: (key: string) => ipcRenderer.invoke('settings:get', key),
     set: (key: string, value: any) => ipcRenderer.invoke('settings:set', key, value),
-    getApiKey: () => ipcRenderer.invoke('settings:get-api-key'),
-    setApiKey: (key: string) => ipcRenderer.invoke('settings:set-api-key', key),
+    getApiKey: (provider: string) => ipcRenderer.invoke('settings:get-api-key', provider),
+    setApiKey: (provider: string, key: string) => ipcRenderer.invoke('settings:set-api-key', provider, key),
+    getProviderBaseUrl: (provider: string) => ipcRenderer.invoke('settings:get-provider-base-url', provider),
+    setProviderBaseUrl: (provider: string, url: string) => ipcRenderer.invoke('settings:set-provider-base-url', provider, url),
   },
   sessions: {
     list: () => ipcRenderer.invoke('sessions:list'),

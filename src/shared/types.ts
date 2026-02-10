@@ -1,3 +1,5 @@
+export type ProviderId = 'anthropic' | 'openai' | 'custom';
+
 export interface IdeaFrontmatter {
   status: 'active' | 'someday' | 'paused' | 'done';
   type: 'work' | 'personal';
@@ -26,6 +28,7 @@ export interface AppSettings {
   vaultPath: string;
   theme: 'light' | 'dark' | 'system';
   model: string;
+  activeProvider: ProviderId;
   onboardingComplete: boolean;
 }
 
@@ -49,18 +52,21 @@ export interface NudgeAPI {
     sendMessage: (
       messages: ChatMessage[],
       systemPrompt: string,
+      provider: ProviderId,
       model: string,
       onChunk: (chunk: string) => void,
       onDone: () => void,
       onError: (error: string) => void
     ) => Promise<() => void>;
-    validateKey: (key: string) => Promise<boolean>;
+    validateKey: (provider: ProviderId, key: string, baseUrl?: string) => Promise<boolean>;
   };
   settings: {
     get: (key: string) => Promise<any>;
     set: (key: string, value: any) => Promise<void>;
-    getApiKey: () => Promise<string | null>;
-    setApiKey: (key: string) => Promise<void>;
+    getApiKey: (provider: ProviderId) => Promise<string | null>;
+    setApiKey: (provider: ProviderId, key: string) => Promise<void>;
+    getProviderBaseUrl: (provider: ProviderId) => Promise<string | null>;
+    setProviderBaseUrl: (provider: ProviderId, url: string) => Promise<void>;
   };
   sessions: {
     list: () => Promise<Session[]>;

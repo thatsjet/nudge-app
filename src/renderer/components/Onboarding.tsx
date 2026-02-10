@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Onboarding.css';
+import type { ProviderId } from '../../shared/types';
 
 function useIsDark(): boolean {
   const [isDark, setIsDark] = useState(() => {
@@ -30,13 +31,27 @@ interface OnboardingProps {
   onComplete: () => void;
 }
 
-type Step = 'welcome' | 'apiKey' | 'vault' | 'ready';
-const STEPS: Step[] = ['welcome', 'apiKey', 'vault', 'ready'];
+type Step = 'welcome' | 'provider' | 'apiKey' | 'vault' | 'ready';
+const STEPS: Step[] = ['welcome', 'provider', 'apiKey', 'vault', 'ready'];
+
+const PROVIDER_OPTIONS: { id: ProviderId; name: string; description: string }[] = [
+  { id: 'anthropic', name: 'Anthropic', description: 'Claude models (Sonnet, Opus, Haiku)' },
+  { id: 'openai', name: 'OpenAI', description: 'GPT-4o, GPT-4.1, o3-mini, and more' },
+  { id: 'custom', name: 'Custom Server', description: 'Any OpenAI-compatible endpoint' },
+];
+
+const PROVIDER_KEY_INFO: Record<ProviderId, { placeholder: string; linkText: string; linkUrl: string }> = {
+  anthropic: { placeholder: 'sk-ant-...', linkText: 'Get your key at console.anthropic.com', linkUrl: 'https://console.anthropic.com' },
+  openai: { placeholder: 'sk-...', linkText: 'Get your key at platform.openai.com', linkUrl: 'https://platform.openai.com/api-keys' },
+  custom: { placeholder: 'your-api-key', linkText: '', linkUrl: '' },
+};
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const isDark = useIsDark();
   const [step, setStep] = useState<Step>('welcome');
+  const [selectedProvider, setSelectedProvider] = useState<ProviderId>('anthropic');
   const [apiKey, setApiKey] = useState('');
+  const [customBaseUrl, setCustomBaseUrl] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -51,9 +66,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     setFeedback(null);
 
     try {
-      const valid = await window.nudge.api.validateKey(apiKey.trim());
+      const baseUrl = selectedProvider === 'custom' ? customBaseUrl.trim() || undefined : undefined;
+      const valid = await window.nudge.api.validateKey(selectedProvider, apiKey.trim(), baseUrl);
       if (valid) {
-        await window.nudge.settings.setApiKey(apiKey.trim());
+        await window.nudge.settings.setApiKey(selectedProvider, apiKey.trim());
+        await window.nudge.settings.set('activeProvider', selectedProvider);
+        if (baseUrl) {
+          await window.nudge.settings.setProviderBaseUrl(selectedProvider, baseUrl);
+        }
         setFeedback({ type: 'success', message: 'Key validated successfully.' });
         setTimeout(() => setStep('vault'), 800);
       } else {
@@ -110,8 +130,36 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <p className="onboarding-mantra">
               "Starting is success, completion is optional."
             </p>
-            <button className="onboarding-btn onboarding-btn--primary" onClick={() => setStep('apiKey')}>
+            <button className="onboarding-btn onboarding-btn--primary" onClick={() => setStep('provider')}>
               Get Started
+            </button>
+            {renderDots()}
+          </div>
+        )}
+
+        {step === 'provider' && (
+          <div className="onboarding-step">
+            <h1 className="onboarding-heading">Choose your AI provider</h1>
+            <p className="onboarding-text">
+              Nudge works with multiple AI providers. Pick the one you'd like to use.
+            </p>
+            <div className="onboarding-provider-cards">
+              {PROVIDER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`onboarding-provider-card ${selectedProvider === opt.id ? 'onboarding-provider-card--active' : ''}`}
+                  onClick={() => setSelectedProvider(opt.id)}
+                >
+                  <span className="onboarding-provider-name">{opt.name}</span>
+                  <span className="onboarding-provider-desc">{opt.description}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              className="onboarding-btn onboarding-btn--primary"
+              onClick={() => setStep('apiKey')}
+            >
+              Continue
             </button>
             {renderDots()}
           </div>
@@ -119,18 +167,32 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
         {step === 'apiKey' && (
           <div className="onboarding-step">
-            <h1 className="onboarding-heading">Connect to Claude</h1>
+            <h1 className="onboarding-heading">Connect to {PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.name}</h1>
             <p className="onboarding-text">
-              Nudge uses the Anthropic API to power its conversational AI. You will need your own API key.
+              Enter your API key to get started. You can change providers later in Settings.
             </p>
-            <a
-              className="onboarding-link"
-              href="https://console.anthropic.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get your API key at console.anthropic.com
-            </a>
+            {PROVIDER_KEY_INFO[selectedProvider].linkUrl && (
+              <a
+                className="onboarding-link"
+                href={PROVIDER_KEY_INFO[selectedProvider].linkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {PROVIDER_KEY_INFO[selectedProvider].linkText}
+              </a>
+            )}
+            {selectedProvider === 'custom' && (
+              <div className="onboarding-input-group">
+                <label className="onboarding-input-label">Base URL</label>
+                <input
+                  className="onboarding-input"
+                  type="text"
+                  value={customBaseUrl}
+                  onChange={(e) => setCustomBaseUrl(e.target.value)}
+                  placeholder="https://your-server.com/v1"
+                />
+              </div>
+            )}
             <div className="onboarding-input-group">
               <label className="onboarding-input-label">API Key</label>
               <div className="onboarding-input-row">
@@ -139,7 +201,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                   type={showKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => { setApiKey(e.target.value); setFeedback(null); }}
-                  placeholder="sk-ant-..."
+                  placeholder={PROVIDER_KEY_INFO[selectedProvider].placeholder}
                 />
                 <button className="onboarding-toggle-btn" onClick={() => setShowKey(!showKey)}>
                   {showKey ? 'Hide' : 'Show'}

@@ -1,10 +1,11 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
-import Anthropic from '@anthropic-ai/sdk';
+import { getProvider, resetProvider } from './providers/registry';
+import { VAULT_TOOLS } from './providers/tools';
+import { ProviderId } from './providers/types';
 
 let mainWindow: BrowserWindow | null = null;
-let anthropicClient: Anthropic | null = null;
 
 // Settings store (simple JSON file in app data)
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -19,7 +20,8 @@ function loadSettings(): Record<string, any> {
   return {
     vaultPath: path.join(app.getPath('home'), 'Nudge'),
     theme: 'system',
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-4-6',
+    activeProvider: 'anthropic',
     onboardingComplete: false,
   };
 }
@@ -197,29 +199,38 @@ ipcMain.handle('settings:set', async (_event, key: string, value: any) => {
   saveSettings(settings);
 });
 
-ipcMain.handle('settings:get-api-key', async () => {
+ipcMain.handle('settings:get-api-key', async (_event, providerId: string) => {
   try {
     const keytar = require('keytar');
-    return await keytar.getPassword('nudge-app', 'anthropic-api-key');
+    return await keytar.getPassword('nudge-app', `api-key-${providerId}`);
   } catch {
-    // Fallback to settings file if keytar not available
     const settings = loadSettings();
-    return settings.apiKey || null;
+    return settings[`apiKey-${providerId}`] || null;
   }
 });
 
-ipcMain.handle('settings:set-api-key', async (_event, key: string) => {
+ipcMain.handle('settings:set-api-key', async (_event, providerId: string, key: string) => {
   try {
     const keytar = require('keytar');
-    await keytar.setPassword('nudge-app', 'anthropic-api-key', key);
+    await keytar.setPassword('nudge-app', `api-key-${providerId}`, key);
   } catch {
-    // Fallback to settings file if keytar not available
     const settings = loadSettings();
-    settings.apiKey = key;
+    settings[`apiKey-${providerId}`] = key;
     saveSettings(settings);
   }
-  // Reset client so it picks up new key
-  anthropicClient = null;
+  resetProvider(providerId as ProviderId);
+});
+
+ipcMain.handle('settings:get-provider-base-url', async (_event, providerId: string) => {
+  const settings = loadSettings();
+  return settings[`baseUrl-${providerId}`] || null;
+});
+
+ipcMain.handle('settings:set-provider-base-url', async (_event, providerId: string, url: string) => {
+  const settings = loadSettings();
+  settings[`baseUrl-${providerId}`] = url;
+  saveSettings(settings);
+  resetProvider(providerId as ProviderId);
 });
 
 // --- Session IPC Handlers ---
@@ -270,90 +281,7 @@ ipcMain.handle('sessions:add-message', async (_event, sessionId: string, message
 
 // --- API IPC Handlers ---
 
-async function getAnthropicClient(): Promise<Anthropic> {
-  if (anthropicClient) return anthropicClient;
-
-  let apiKey: string | null = null;
-  try {
-    const keytar = require('keytar');
-    apiKey = await keytar.getPassword('nudge-app', 'anthropic-api-key');
-  } catch {
-    const settings = loadSettings();
-    apiKey = settings.apiKey || null;
-  }
-
-  if (!apiKey) {
-    throw new Error('API key not configured');
-  }
-
-  anthropicClient = new Anthropic({ apiKey });
-  return anthropicClient;
-}
-
-// Tool definitions for Claude
-const vaultTools: Anthropic.Tool[] = [
-  {
-    name: 'read_file',
-    description: 'Read the contents of a file in the vault. Use this to check tasks, ideas, config, daily logs, etc.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        path: { type: 'string', description: 'File path relative to vault root (e.g., "tasks.md", "ideas/my-idea.md")' },
-      },
-      required: ['path'],
-    },
-  },
-  {
-    name: 'write_file',
-    description: 'Write or overwrite a file in the vault.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        path: { type: 'string', description: 'File path relative to vault root' },
-        content: { type: 'string', description: 'Full file content to write' },
-      },
-      required: ['path', 'content'],
-    },
-  },
-  {
-    name: 'edit_file',
-    description: 'Make a targeted edit to a file by replacing specific text. Use this for checking off tasks, updating status, etc.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        path: { type: 'string', description: 'File path relative to vault root' },
-        old_text: { type: 'string', description: 'The exact text to find and replace' },
-        new_text: { type: 'string', description: 'The text to replace it with' },
-      },
-      required: ['path', 'old_text', 'new_text'],
-    },
-  },
-  {
-    name: 'list_files',
-    description: 'List files in a vault directory.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        directory: { type: 'string', description: 'Directory path relative to vault root (e.g., "ideas/", "daily/")' },
-      },
-      required: ['directory'],
-    },
-  },
-  {
-    name: 'create_file',
-    description: 'Create a new file in the vault. Fails if the file already exists.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        path: { type: 'string', description: 'File path relative to vault root' },
-        content: { type: 'string', description: 'File content' },
-      },
-      required: ['path', 'content'],
-    },
-  },
-];
-
-// Process tool calls from Claude
+// Process tool calls (provider-agnostic — works with any LLM)
 async function processToolCall(toolName: string, toolInput: Record<string, string>): Promise<string> {
   const vaultPath = getVaultPath();
 
@@ -403,79 +331,73 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
   }
 }
 
-let streamAbortController: AbortController | null = null;
+let currentAbort: (() => void) | null = null;
 
-ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: string, model: string) => {
+ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: string, providerId: string, model: string) => {
   try {
-    const client = await getAnthropicClient();
+    const provider = getProvider(providerId as ProviderId);
+
+    // Get API key and configure provider
+    let apiKey: string | null = null;
+    try {
+      const keytar = require('keytar');
+      apiKey = await keytar.getPassword('nudge-app', `api-key-${providerId}`);
+    } catch {
+      const settings = loadSettings();
+      apiKey = settings[`apiKey-${providerId}`] || null;
+    }
+    if (!apiKey) throw new Error('API key not configured. Open Settings to add one.');
+
+    const settings = loadSettings();
+    const baseUrl = settings[`baseUrl-${providerId}`] || undefined;
+    provider.configure(apiKey, baseUrl);
 
     // Cancel any existing stream
-    if (streamAbortController) {
-      streamAbortController.abort();
+    if (currentAbort) {
+      currentAbort();
     }
-    streamAbortController = new AbortController();
-
-    // Convert messages to Anthropic format
-    const anthropicMessages: Anthropic.MessageParam[] = messages.map(m => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
 
     // Agentic loop: keep calling the API while there are tool uses
-    let currentMessages = [...anthropicMessages];
+    let currentMessages = [...messages];
     let continueLoop = true;
 
     while (continueLoop) {
-      const stream = client.messages.stream({
-        model: model || 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
-        system: systemPrompt,
+      const { result, abort } = provider.sendMessageStream({
         messages: currentMessages,
-        tools: vaultTools,
+        systemPrompt,
+        model,
+        tools: VAULT_TOOLS,
+        onText: (chunk) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('api:stream-chunk', chunk);
+          }
+        },
       });
 
-      let fullResponse = '';
-      let toolUseBlocks: any[] = [];
-      let currentToolUse: any = null;
+      currentAbort = abort;
 
-      stream.on('text', (text: string) => {
-        fullResponse += text;
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('api:stream-chunk', text);
-        }
-      });
+      const roundResult = await result;
 
-      // Collect the final message
-      const finalMessage = await stream.finalMessage();
-
-      // Check for tool use blocks
-      toolUseBlocks = finalMessage.content.filter((block: any) => block.type === 'tool_use');
-
-      if (toolUseBlocks.length > 0) {
+      if (roundResult.toolCalls.length > 0) {
         // Process tool calls
-        const toolResults: any[] = [];
-        for (const toolBlock of toolUseBlocks) {
-          const result = await processToolCall(toolBlock.name, toolBlock.input as Record<string, string>);
-          toolResults.push({
-            type: 'tool_result',
-            tool_use_id: toolBlock.id,
-            content: result,
-          });
+        const toolResults = [];
+        for (const call of roundResult.toolCalls) {
+          const toolResult = await processToolCall(call.name, call.arguments);
+          toolResults.push({ toolCallId: call.id, content: toolResult });
         }
 
-        // Add assistant message and tool results to continue the loop
-        currentMessages = [
-          ...currentMessages,
-          { role: 'assistant', content: finalMessage.content },
-          { role: 'user', content: toolResults },
-        ];
+        // Build follow-up messages in provider-native format
+        const followUp = provider.buildToolResultMessages(
+          roundResult.rawAssistantMessage,
+          toolResults
+        );
+        currentMessages = [...currentMessages, ...followUp];
 
-        // Signal that the AI is working on something (tool use indicator)
+        // Signal tool use to renderer
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('api:tool-use', toolUseBlocks.map((b: any) => b.name));
+          mainWindow.webContents.send('api:tool-use', roundResult.toolCalls.map((c) => c.name));
         }
       } else {
-        // No more tool calls — we're done
         continueLoop = false;
       }
     }
@@ -493,21 +415,16 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
 });
 
 ipcMain.handle('api:cancel-stream', async () => {
-  if (streamAbortController) {
-    streamAbortController.abort();
-    streamAbortController = null;
+  if (currentAbort) {
+    currentAbort();
+    currentAbort = null;
   }
 });
 
-ipcMain.handle('api:validate-key', async (_event, key: string) => {
+ipcMain.handle('api:validate-key', async (_event, providerId: string, key: string, baseUrl?: string) => {
   try {
-    const testClient = new Anthropic({ apiKey: key });
-    await testClient.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 10,
-      messages: [{ role: 'user', content: 'Hi' }],
-    });
-    return true;
+    const provider = getProvider(providerId as ProviderId);
+    return await provider.validateKey(key, baseUrl);
   } catch {
     return false;
   }
@@ -515,7 +432,27 @@ ipcMain.handle('api:validate-key', async (_event, key: string) => {
 
 // --- App Lifecycle ---
 
-app.whenReady().then(() => {
+// Migrate old single API key to new provider-aware format
+async function migrateApiKey() {
+  try {
+    const keytar = require('keytar');
+    const oldKey = await keytar.getPassword('nudge-app', 'anthropic-api-key');
+    if (oldKey) {
+      await keytar.setPassword('nudge-app', 'api-key-anthropic', oldKey);
+      await keytar.deletePassword('nudge-app', 'anthropic-api-key');
+    }
+  } catch {}
+  // Also migrate settings-file fallback
+  const settings = loadSettings();
+  if (settings.apiKey && !settings['apiKey-anthropic']) {
+    settings['apiKey-anthropic'] = settings.apiKey;
+    delete settings.apiKey;
+    saveSettings(settings);
+  }
+}
+
+app.whenReady().then(async () => {
+  await migrateApiKey();
   createWindow();
 
   app.on('activate', () => {

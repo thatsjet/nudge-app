@@ -153,6 +153,33 @@
   border-color: var(--accent);
 }
 
+.settings-provider-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-provider-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  transition: all 150ms ease;
+  text-align: center;
+}
+
+.settings-provider-tab:hover {
+  background: var(--bg-hover);
+}
+
+.settings-provider-tab--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+
 .settings-theme-options {
   display: flex;
   gap: 8px;

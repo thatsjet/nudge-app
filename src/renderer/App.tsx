@@ -112,11 +112,14 @@ export default function App() {
 
     try {
       const systemPrompt = await buildSystemPrompt();
-      const model = (await window.nudge.settings.get('model')) || 'claude-sonnet-4-20250514';
+      const activeProvider = (await window.nudge.settings.get('activeProvider')) || 'anthropic';
+      const model = (await window.nudge.settings.get(`model-${activeProvider}`))
+        || (activeProvider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o');
 
       const cancel = await window.nudge.api.sendMessage(
         updatedMessages,
         systemPrompt,
+        activeProvider,
         model,
         // onChunk
         (chunk: string) => {

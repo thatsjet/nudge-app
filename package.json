@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
     "dev:vite": "vite --config vite.config.ts",
-    "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .",
+    "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron . --dev",
     "build": "tsc -p tsconfig.electron.json && vite build --config vite.config.ts && electron-builder",
     "build:vite": "vite build --config vite.config.ts",
     "build:electron": "tsc -p tsconfig.electron.json"
@@ -17,6 +17,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "keytar": "^7.9.0",
+    "openai": "^4.104.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-markdown": "^10.1.0",
