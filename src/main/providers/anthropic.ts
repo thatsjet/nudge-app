@@ -11,6 +11,7 @@ import {
 export class AnthropicProvider implements LLMProvider {
   id = 'anthropic';
   private client: Anthropic | null = null;
+  private readonly isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
   configure(apiKey: string): void {
     this.client = new Anthropic({ apiKey });
@@ -25,7 +26,16 @@ export class AnthropicProvider implements LLMProvider {
         messages: [{ role: 'user', content: 'Hi' }],
       });
       return true;
-    } catch {
+    } catch (error: any) {
+      if (this.isDev) {
+        console.error('[provider:anthropic] validateKey failed', {
+          apiKeyLength: apiKey.length,
+          message: error?.message || String(error),
+          status: error?.status,
+          code: error?.code,
+          type: error?.type,
+        });
+      }
       return false;
     }
   }

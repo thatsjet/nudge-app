@@ -11,6 +11,7 @@ import {
 export class OpenAIProvider implements LLMProvider {
   id: string;
   private client: OpenAI | null = null;
+  private readonly isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
   constructor(id: string = 'openai') {
     this.id = id;
@@ -35,7 +36,18 @@ export class OpenAIProvider implements LLMProvider {
         messages: [{ role: 'user', content: 'Hi' }],
       });
       return true;
-    } catch {
+    } catch (error: any) {
+      if (this.isDev) {
+        console.error('[provider:openai] validateKey failed', {
+          providerId: this.id,
+          baseUrl: baseUrl || '(default)',
+          apiKeyLength: apiKey.length,
+          message: error?.message || String(error),
+          status: error?.status,
+          code: error?.code,
+          type: error?.type,
+        });
+      }
       return false;
     }
   }

@@ -6,6 +6,93 @@ import { VAULT_TOOLS } from './providers/tools';
 import { ProviderId } from './providers/types';
 
 let mainWindow: BrowserWindow | null = null;
+const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+const DEV_LOG_DIR = 'logs';
+const DEV_LOG_FILE = 'dev.log';
+
+function truncate(value: string, max = 220): string {
+  if (value.length <= max) return value;
+  return `${value.slice(0, max)}... [len=${value.length}]`;
+}
+
+function summarizeForLog(value: any, keyHint = '', depth = 0): any {
+  if (depth > 3) return '[depth-limit]';
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+
+  if (typeof value === 'string') {
+    if (/(^|[-_])(api[-_]?key|key|token|password|authorization)($|[-_])/i.test(keyHint)) {
+      return `<redacted len=${value.length}>`;
+    }
+    if (keyHint === 'systemPrompt') return `<systemPrompt len=${value.length}>`;
+    if (keyHint === 'content') return `<content len=${value.length}>`;
+    return truncate(value);
+  }
+
+  if (Array.isArray(value)) {
+    const maxItems = 10;
+    const mapped = value.slice(0, maxItems).map((item) => summarizeForLog(item, '', depth + 1));
+    if (value.length > maxItems) mapped.push(`[+${value.length - maxItems} more]`);
+    return mapped;
+  }
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, any>;
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(obj)) {
+      out[k] = summarizeForLog(v, k, depth + 1);
+    }
+    return out;
+  }
+
+  return String(value);
+}
+
+function appendDevLog(line: string): void {
+  if (!IS_DEV || !app.isReady()) return;
+  try {
+    const logDir = path.join(app.getPath('userData'), DEV_LOG_DIR);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    fs.appendFileSync(path.join(logDir, DEV_LOG_FILE), `${line}\n`, 'utf-8');
+  } catch {
+    // best effort only
+  }
+}
+
+function devLog(scope: string, message: string, payload?: any): void {
+  if (!IS_DEV) return;
+  const ts = new Date().toISOString();
+  const base = `[${ts}] [main:${scope}] ${message}`;
+  if (payload === undefined) {
+    console.log(base);
+    appendDevLog(base);
+    return;
+  }
+  const summarized = summarizeForLog(payload);
+  console.log(base, summarized);
+  appendDevLog(`${base} ${JSON.stringify(summarized)}`);
+}
+
+function formatError(error: any): Record<string, any> {
+  return {
+    name: error?.name,
+    message: error?.message || String(error),
+    code: error?.code,
+    status: error?.status,
+    type: error?.type,
+    stack: error?.stack ? truncate(error.stack, 500) : undefined,
+  };
+}
+
+process.on('uncaughtException', (error) => {
+  devLog('process', 'uncaught exception', formatError(error));
+});
+
+process.on('unhandledRejection', (reason) => {
+  devLog('process', 'unhandled rejection', formatError(reason));
+});
 
 // Settings store (simple JSON file in app data)
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -52,6 +139,7 @@ function resolveVaultPath(relativePath: string): string {
 }
 
 function createWindow() {
+  devLog('lifecycle', 'creating browser window', { isDev: IS_DEV });
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -66,19 +154,38 @@ function createWindow() {
     },
   });
 
-  if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
+  if (IS_DEV) {
+    devLog('lifecycle', 'loading renderer from dev server', { url: 'http://localhost:5173' });
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
   } else {
+    devLog('lifecycle', 'loading renderer from built index', { mode: 'packaged' });
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  if (IS_DEV) {
+    mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      devLog('renderer-console', 'console message', { level, message, line, sourceId });
+    });
+    mainWindow.webContents.on('did-finish-load', () => {
+      devLog('lifecycle', 'renderer finished load');
+    });
+    mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      devLog('lifecycle', 'renderer failed load', { errorCode, errorDescription, validatedURL });
+    });
+    mainWindow.webContents.on('render-process-gone', (_event, details) => {
+      devLog('lifecycle', 'renderer process gone', details);
+    });
+  }
+
   mainWindow.on('closed', () => {
+    devLog('lifecycle', 'window closed');
     mainWindow = null;
   });
 
   // Open external links in browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    devLog('window', 'opening external link', { url });
     shell.openExternal(url);
     return { action: 'deny' };
   });
@@ -227,6 +334,7 @@ ipcMain.handle('settings:get-provider-base-url', async (_event, providerId: stri
 });
 
 ipcMain.handle('settings:set-provider-base-url', async (_event, providerId: string, url: string) => {
+  devLog('settings', 'set provider base URL', { providerId, url });
   const settings = loadSettings();
   settings[`baseUrl-${providerId}`] = url;
   saveSettings(settings);
@@ -334,6 +442,14 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
 let currentAbort: (() => void) | null = null;
 
 ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: string, providerId: string, model: string) => {
+  const requestId = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  devLog('api:send-message', 'start', {
+    requestId,
+    providerId,
+    model,
+    messageCount: messages?.length || 0,
+    systemPromptLength: typeof systemPrompt === 'string' ? systemPrompt.length : 0,
+  });
   try {
     const provider = getProvider(providerId as ProviderId);
 
@@ -351,17 +467,32 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
     const settings = loadSettings();
     const baseUrl = settings[`baseUrl-${providerId}`] || undefined;
     provider.configure(apiKey, baseUrl);
+    devLog('api:send-message', 'provider configured', {
+      requestId,
+      providerId,
+      model,
+      baseUrl: baseUrl || '(default)',
+      apiKeyLength: apiKey.length,
+    });
 
     // Cancel any existing stream
     if (currentAbort) {
+      devLog('api:send-message', 'canceling previous stream', { requestId });
       currentAbort();
     }
 
     // Agentic loop: keep calling the API while there are tool uses
     let currentMessages = [...messages];
     let continueLoop = true;
+    let round = 0;
 
     while (continueLoop) {
+      round += 1;
+      devLog('api:send-message', 'round start', {
+        requestId,
+        round,
+        currentMessageCount: currentMessages.length,
+      });
       const { result, abort } = provider.sendMessageStream({
         messages: currentMessages,
         systemPrompt,
@@ -377,11 +508,24 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
       currentAbort = abort;
 
       const roundResult = await result;
+      devLog('api:send-message', 'round complete', {
+        requestId,
+        round,
+        textLength: roundResult.textContent.length,
+        toolCallCount: roundResult.toolCalls.length,
+        toolNames: roundResult.toolCalls.map((c) => c.name),
+      });
 
       if (roundResult.toolCalls.length > 0) {
         // Process tool calls
         const toolResults = [];
         for (const call of roundResult.toolCalls) {
+          devLog('api:send-message', 'executing tool call', {
+            requestId,
+            round,
+            toolName: call.name,
+            toolCallId: call.id,
+          });
           const toolResult = await processToolCall(call.name, call.arguments);
           toolResults.push({ toolCallId: call.id, content: toolResult });
         }
@@ -402,11 +546,16 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
       }
     }
 
+    devLog('api:send-message', 'complete', { requestId });
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('api:stream-done');
     }
   } catch (error: any) {
-    if (error.name === 'AbortError') return;
+    if (error.name === 'AbortError') {
+      devLog('api:send-message', 'aborted', { requestId });
+      return;
+    }
+    devLog('api:send-message', 'error', { requestId, error: formatError(error) });
     const message = error?.message || 'Unknown error';
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('api:stream-error', message);
@@ -415,6 +564,7 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
 });
 
 ipcMain.handle('api:cancel-stream', async () => {
+  devLog('api:cancel-stream', 'received cancel request', { hasCurrentAbort: !!currentAbort });
   if (currentAbort) {
     currentAbort();
     currentAbort = null;
@@ -423,9 +573,25 @@ ipcMain.handle('api:cancel-stream', async () => {
 
 ipcMain.handle('api:validate-key', async (_event, providerId: string, key: string, baseUrl?: string) => {
   try {
+    devLog('api:validate-key', 'start', {
+      providerId,
+      baseUrl: baseUrl || '(default)',
+      keyLength: key?.length || 0,
+    });
     const provider = getProvider(providerId as ProviderId);
-    return await provider.validateKey(key, baseUrl);
-  } catch {
+    const valid = await provider.validateKey(key, baseUrl);
+    devLog('api:validate-key', 'result', {
+      providerId,
+      baseUrl: baseUrl || '(default)',
+      valid,
+    });
+    return valid;
+  } catch (error: any) {
+    devLog('api:validate-key', 'error', {
+      providerId,
+      baseUrl: baseUrl || '(default)',
+      error: formatError(error),
+    });
     return false;
   }
 });
@@ -434,12 +600,14 @@ ipcMain.handle('api:validate-key', async (_event, providerId: string, key: strin
 
 // Migrate old single API key to new provider-aware format
 async function migrateApiKey() {
+  devLog('migration', 'starting API key migration check');
   try {
     const keytar = require('keytar');
     const oldKey = await keytar.getPassword('nudge-app', 'anthropic-api-key');
     if (oldKey) {
       await keytar.setPassword('nudge-app', 'api-key-anthropic', oldKey);
       await keytar.deletePassword('nudge-app', 'anthropic-api-key');
+      devLog('migration', 'migrated keytar anthropic key', { migrated: true });
     }
   } catch {}
   // Also migrate settings-file fallback
@@ -448,10 +616,13 @@ async function migrateApiKey() {
     settings['apiKey-anthropic'] = settings.apiKey;
     delete settings.apiKey;
     saveSettings(settings);
+    devLog('migration', 'migrated fallback settings API key', { migrated: true });
   }
 }
 
 app.whenReady().then(async () => {
+  devLog('lifecycle', 'app ready');
+  devLog('lifecycle', 'dev log file', { path: path.join(app.getPath('userData'), DEV_LOG_DIR, DEV_LOG_FILE) });
   await migrateApiKey();
   createWindow();
 
@@ -463,6 +634,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  devLog('lifecycle', 'window-all-closed', { platform: process.platform });
   if (process.platform !== 'darwin') {
     app.quit();
   }
