@@ -1,0 +1,210 @@
+:root {
+  --bg-primary: #faf9f7;
+  --bg-secondary: #f0eeeb;
+  --bg-chat: #ffffff;
+  --bg-input: #ffffff;
+  --bg-user-msg: #e8e4df;
+  --bg-assistant-msg: transparent;
+  --bg-sidebar: #f5f3f0;
+  --bg-hover: #ebe8e4;
+  --text-primary: #2c2c2c;
+  --text-secondary: #6b6560;
+  --text-muted: #9b958f;
+  --accent: #5a9e72;
+  --accent-light: #82b894;
+  --border: #e0dcd7;
+  --border-light: #eae7e3;
+  --shadow: rgba(0, 0, 0, 0.04);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  --drag-region-height: 52px;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1918;
+  --bg-secondary: #242220;
+  --bg-chat: #1e1d1b;
+  --bg-input: #2a2826;
+  --bg-user-msg: #302e2b;
+  --bg-assistant-msg: transparent;
+  --bg-sidebar: #211f1e;
+  --bg-hover: #353230;
+  --text-primary: #f2efeb;
+  --text-secondary: #bdb5ab;
+  --text-muted: #8a8078;
+  --accent: #6db882;
+  --accent-light: #4a8a60;
+  --border: #353230;
+  --border-light: #2a2826;
+  --shadow: rgba(0, 0, 0, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: #1a1918;
+    --bg-secondary: #242220;
+    --bg-chat: #1e1d1b;
+    --bg-input: #2a2826;
+    --bg-user-msg: #302e2b;
+    --bg-assistant-msg: transparent;
+    --bg-sidebar: #211f1e;
+    --bg-hover: #353230;
+    --text-primary: #f2efeb;
+    --text-secondary: #bdb5ab;
+    --text-muted: #8a8078;
+    --accent: #6db882;
+    --accent-light: #4a8a60;
+    --border: #353230;
+    --border-light: #2a2826;
+    --shadow: rgba(0, 0, 0, 0.2);
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Drag region for frameless window */
+.drag-region {
+  -webkit-app-region: drag;
+  height: var(--drag-region-height);
+}
+
+.drag-region * {
+  -webkit-app-region: no-drag;
+}
+
+/* Input reset */
+input, textarea, button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* Markdown content styling */
+.markdown-content {
+  line-height: 1.7;
+  word-wrap: break-word;
+}
+
+.markdown-content p {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.markdown-content h1 { font-size: 1.3em; }
+.markdown-content h2 { font-size: 1.15em; }
+.markdown-content h3 { font-size: 1.05em; }
+
+.markdown-content ul, .markdown-content ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-content code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-secondary);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+}
+
+.markdown-content pre {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 1em;
+  overflow-x: auto;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  margin-bottom: 0.5em;
+}
+
+.markdown-content input[type="checkbox"] {
+  margin-right: 0.5em;
+  accent-color: var(--accent);
+}
+
+.markdown-content strong {
+  font-weight: 600;
+}
+
+.markdown-content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-content a:hover {
+  text-decoration: underline;
+}

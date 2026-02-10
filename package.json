@@ -1,0 +1,38 @@
+{
+  "name": "nudge",
+  "version": "0.1.0",
+  "description": "An ADHD-aware desktop app for managing ideas and daily planning through conversational AI",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite --config vite.config.ts",
+    "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron .",
+    "build": "tsc -p tsconfig.electron.json && vite build --config vite.config.ts && electron-builder",
+    "build:vite": "vite build --config vite.config.ts",
+    "build:electron": "tsc -p tsconfig.electron.json"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.74.0",
+    "keytar": "^7.9.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.2.1",
+    "electron": "^40.2.1",
+    "electron-builder": "^26.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.3"
+  }
+}

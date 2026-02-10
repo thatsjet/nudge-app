@@ -1,0 +1,115 @@
+.file-explorer {
+  width: 260px;
+  height: 100%;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.file-explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.file-explorer-header-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.file-explorer-header-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.file-explorer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 13px;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.file-explorer-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-explorer-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.file-explorer-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: background 150ms ease;
+  user-select: none;
+}
+
+.file-explorer-item:hover {
+  background: var(--bg-hover);
+}
+
+.file-explorer-item--dir {
+  font-weight: 500;
+}
+
+.file-explorer-item-indent {
+  display: inline-block;
+}
+
+.file-explorer-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.file-explorer-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-explorer-chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 14px;
+  text-align: center;
+  transition: transform 150ms ease;
+  flex-shrink: 0;
+}
+
+.file-explorer-chevron--open {
+  transform: rotate(90deg);
+}
+
+.file-explorer-children {
+  padding-left: 12px;
+}
+
+.file-explorer-empty {
+  padding: 20px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}

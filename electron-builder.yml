@@ -1,0 +1,21 @@
+appId: com.nudge.app
+productName: Nudge
+directories:
+  output: release
+files:
+  - dist/**
+  - dist-electron/**
+extraResources:
+  - default-vault/**
+icon: icon_sm.png
+mac:
+  target:
+    - dmg
+    - dir
+  category: public.app-category.productivity
+  icon: icon_sm.png
+win:
+  target: nsis
+  icon: icon_sm.png
+linux:
+  target: AppImage
