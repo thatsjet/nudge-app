@@ -7,7 +7,7 @@ Thanks for your interest in contributing to Nudge! This project is built for peo
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18+
-- An [Anthropic API key](https://console.anthropic.com/) (for testing chat features)
+- An [Anthropic API key](https://console.anthropic.com/) or [OpenAI API Key](https://platform.openai.com/) (for testing chat features)
 
 ### Setup
 
@@ -25,7 +25,7 @@ This starts the Vite dev server and Electron together. The app will open with ho
 ```
 src/
 ├── main/              # Electron main process (Node.js)
-│   ├── main.ts        # Window management, IPC handlers, Claude API, vault ops
+│   ├── main.ts        # Window management, IPC handlers, Claude/ChatGPT API, vault ops
 │   └── preload.ts     # Context bridge (window.nudge API)
 ├── renderer/          # React frontend (browser context)
 │   ├── App.tsx        # Root component
@@ -100,7 +100,7 @@ When contributing to Nudge, keep these principles in mind:
 
 ### Technical
 
-- **Keep it local.** No network calls except to the Anthropic API.
+- **Keep it local.** No network calls except to the model provider.
 - **Keep it transparent.** The user should always be able to see what the AI knows by looking at their vault files.
 - **Keep it simple.** Plain markdown files, simple JSON settings, no database.
 
@@ -113,4 +113,6 @@ When contributing to Nudge, keep these principles in mind:
 
 ## Questions?
 
-Open an issue or start a discussion. There are no stupid questions. Starting is success.
+Open an issue or start a discussion. There are no stupid questions.
+
+Starting is success.
