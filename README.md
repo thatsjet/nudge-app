@@ -18,7 +18,7 @@
 
 ## What is Nudge?
 
-Nudge is an open-source desktop app that helps people with ADHD manage their ideas, plan their days, and actually get started on things — through a calm, conversational interface powered by Claude.
+Nudge is an open-source desktop app that helps people with ADHD manage their ideas, plan their days, and actually get started on things — through a calm, conversational interface powered by modern LLM providers (Anthropic, OpenAI, or a custom OpenAI-compatible server).
 
 It's not a task manager. It's not a planner. It's a supportive presence that surfaces small, concrete next steps and celebrates every start.
 
@@ -29,7 +29,8 @@ It's not a task manager. It's not a planner. It's a supportive presence that sur
 - **Chat-forward** — Talk to Nudge like you'd talk to a friend. "Start my day." "I have 30 minutes." "I had an idea." It handles the rest.
 - **Markdown backend** — All your data lives in plain markdown files you own. Edit them with any text editor, sync them with git, back them up however you want.
 - **ADHD-first design** — No badges. No streaks. No red notification dots. No guilt. Just a quiet room that helps you start.
-- **Fully local** — Your data never leaves your machine. No accounts, no telemetry, no cloud. You bring your own Anthropic API key.
+- **Fully local** — Your data never leaves your machine. No accounts, no telemetry, no cloud. You bring your own provider API key.
+- **Provider choice** — Switch between Anthropic, OpenAI, or a custom OpenAI-compatible endpoint from Settings.
 
 ---
 
@@ -38,7 +39,10 @@ It's not a task manager. It's not a planner. It's a supportive presence that sur
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18+)
-- An [Anthropic API key](https://console.anthropic.com/)
+- An API key for your provider of choice:
+  - [Anthropic](https://console.anthropic.com/)
+  - [OpenAI](https://platform.openai.com/api-keys)
+  - Custom OpenAI-compatible provider
 
 ### Install & Run
 
@@ -51,9 +55,11 @@ npm run dev
 
 On first launch, Nudge will walk you through:
 
-1. Entering your Anthropic API key
-2. Setting up your vault directory (defaults to `~/Nudge/`)
-3. Starting your first conversation
+1. Choosing your AI provider
+2. Entering API credentials
+3. For custom providers: entering Base URL and model name
+4. Setting up your vault directory (defaults to `~/Nudge/`)
+5. Starting your first conversation
 
 ---
 
@@ -106,7 +112,7 @@ You can open and edit any of these files directly from Nudge's built-in file exp
 - **Electron** — Cross-platform desktop shell
 - **React 19** + **Vite** — Fast renderer with HMR
 - **TypeScript** — End to end
-- **Anthropic Claude API** — Conversational AI with tool use
+- **Provider adapters (Anthropic + OpenAI-compatible)** — Conversational AI with tool use
 - **keytar** — Secure API key storage via OS keychain
 - **react-markdown** + **remark-gfm** — Rich message rendering
 
@@ -141,7 +147,8 @@ cp -R release/mac-arm64/Nudge.app ~/Applications/
 ```
 src/
 ├── main/            # Electron main process
-│   ├── main.ts      # Window, IPC handlers, Claude API, vault ops
+│   ├── main.ts      # Window, IPC handlers, provider orchestration, vault ops
+│   ├── providers/   # Provider implementations (Anthropic, OpenAI, custom)
 │   └── preload.ts   # Context bridge (window.nudge API)
 ├── renderer/        # React frontend
 │   ├── App.tsx      # Root component with routing
