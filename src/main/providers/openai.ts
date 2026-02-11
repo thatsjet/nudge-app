@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import * as https from 'https';
+import * as tls from 'tls';
 import {
   LLMProvider,
   NeutralToolDef,
@@ -25,22 +27,133 @@ export class OpenAIProvider implements LLMProvider {
     return dump;
   }
 
+  private createHttpAgent(baseUrl?: string): https.Agent | undefined {
+    // Custom OpenAI-compatible providers often use internal/self-signed certs.
+    // For that provider only, allow TLS with untrusted chains.
+    if (this.id === 'custom' && baseUrl?.startsWith('https://')) {
+      return new https.Agent({ rejectUnauthorized: false });
+    }
+    return undefined;
+  }
+
+  private certificateChain(cert: tls.DetailedPeerCertificate): Array<Record<string, any>> {
+    const chain: Array<Record<string, any>> = [];
+    const seen = new Set<string>();
+    let current: tls.DetailedPeerCertificate | null = cert;
+
+    for (let depth = 0; depth < 12 && current; depth += 1) {
+      if (!current.subject || Object.keys(current.subject).length === 0) break;
+      const fingerprint = current.fingerprint256 || current.fingerprint || `depth-${depth}`;
+      if (seen.has(fingerprint)) break;
+      seen.add(fingerprint);
+
+      chain.push({
+        depth,
+        subject: current.subject,
+        issuer: current.issuer,
+        subjectaltname: current.subjectaltname,
+        valid_from: current.valid_from,
+        valid_to: current.valid_to,
+        serialNumber: current.serialNumber,
+        fingerprint: current.fingerprint,
+        fingerprint256: current.fingerprint256,
+        ca: current.ca,
+      });
+
+      const issuerCert = current.issuerCertificate as tls.DetailedPeerCertificate | undefined;
+      if (!issuerCert || issuerCert === current) break;
+      current = issuerCert;
+    }
+
+    return chain;
+  }
+
+  private async logCertChain(baseUrl: string): Promise<void> {
+    try {
+      const url = new URL(baseUrl);
+      if (url.protocol !== 'https:') {
+        console.log('[provider:openai] cert-chain skip (non-https)', { baseUrl });
+        return;
+      }
+
+      const host = url.hostname;
+      const port = Number(url.port || 443);
+
+      await new Promise<void>((resolve) => {
+        const socket = tls.connect(
+          {
+            host,
+            port,
+            servername: host,
+            rejectUnauthorized: false,
+          },
+          () => {
+            try {
+              const cert = socket.getPeerCertificate(true) as tls.DetailedPeerCertificate;
+              console.log('[provider:openai] cert-chain details', {
+                providerId: this.id,
+                baseUrl,
+                host,
+                port,
+              });
+              console.dir(this.certificateChain(cert), { depth: null });
+            } catch (error: any) {
+              console.error('[provider:openai] cert-chain read failed', {
+                message: error?.message || String(error),
+              });
+            } finally {
+              socket.end();
+              resolve();
+            }
+          }
+        );
+
+        socket.setTimeout(5000, () => {
+          console.error('[provider:openai] cert-chain probe timeout', { host, port });
+          socket.destroy();
+          resolve();
+        });
+
+        socket.on('error', (error) => {
+          console.error('[provider:openai] cert-chain probe error', {
+            host,
+            port,
+            message: error?.message || String(error),
+          });
+          resolve();
+        });
+      });
+    } catch (error: any) {
+      console.error('[provider:openai] cert-chain setup error', {
+        baseUrl,
+        message: error?.message || String(error),
+      });
+    }
+  }
+
   constructor(id: string = 'openai') {
     this.id = id;
   }
 
   configure(apiKey: string, baseUrl?: string): void {
+    const httpAgent = this.createHttpAgent(baseUrl);
     this.client = new OpenAI({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      ...(httpAgent ? { httpAgent } : {}),
     });
   }
 
   async validateKey(apiKey: string, baseUrl?: string): Promise<boolean> {
     try {
+      if (this.isDev && this.id === 'custom' && baseUrl) {
+        await this.logCertChain(baseUrl);
+      }
+      const httpAgent = this.createHttpAgent(baseUrl);
       const testClient = new OpenAI({
         apiKey,
         ...(baseUrl ? { baseURL: baseUrl } : {}),
+        ...(httpAgent ? { httpAgent } : {}),
       });
       const response = await testClient.chat.completions.create({
         model: this.id === 'custom' ? 'gpt-4o' : 'gpt-4o-mini',
