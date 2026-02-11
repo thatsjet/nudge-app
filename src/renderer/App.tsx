@@ -19,6 +19,7 @@ export default function App() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [theme, setTheme] = useState<string>('system');
   const cancelStreamRef = useRef<(() => void) | null>(null);
+  const streamingContentRef = useRef('');
 
   // Load initial state
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function App() {
     setCurrentSessionId(session.id);
     setMessages([]);
     setStreamingContent('');
+    streamingContentRef.current = '';
     setIsStreaming(false);
   }
 
@@ -104,6 +106,7 @@ export default function App() {
     setMessages(updatedMessages);
     setIsStreaming(true);
     setStreamingContent('');
+    streamingContentRef.current = '';
 
     // Save user message to session
     if (currentSessionId) {
@@ -123,15 +126,20 @@ export default function App() {
         model,
         // onChunk
         (chunk: string) => {
-          setStreamingContent(prev => prev + chunk);
+          setStreamingContent(prev => {
+            const next = prev + chunk;
+            streamingContentRef.current = next;
+            return next;
+          });
         },
         // onDone
         () => {
-          setStreamingContent(current => {
+          const finalContent = streamingContentRef.current;
+          if (finalContent.trim()) {
             const assistantMessage: ChatMessage = {
               id: crypto.randomUUID(),
               role: 'assistant',
-              content: current,
+              content: finalContent,
               timestamp: Date.now(),
             };
             setMessages(prev => [...prev, assistantMessage]);
@@ -140,8 +148,9 @@ export default function App() {
             if (currentSessionId) {
               window.nudge.sessions.addMessage(currentSessionId, assistantMessage);
             }
-            return '';
-          });
+          }
+          streamingContentRef.current = '';
+          setStreamingContent('');
           setIsStreaming(false);
           cancelStreamRef.current = null;
         },
@@ -154,6 +163,7 @@ export default function App() {
             timestamp: Date.now(),
           };
           setMessages(prev => [...prev, errorMessage]);
+          streamingContentRef.current = '';
           setStreamingContent('');
           setIsStreaming(false);
           cancelStreamRef.current = null;
@@ -169,6 +179,7 @@ export default function App() {
         timestamp: Date.now(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      streamingContentRef.current = '';
       setStreamingContent('');
       setIsStreaming(false);
     }
