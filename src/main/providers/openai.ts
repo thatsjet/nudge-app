@@ -206,17 +206,45 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   private toOpenAIMessages(
-    messages: ChatMessageShape[],
+    messages: any[],
     systemPrompt: string
   ): OpenAI.ChatCompletionMessageParam[] {
     const result: OpenAI.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
     ];
     for (const m of messages) {
-      result.push({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      });
+      if (!m || typeof m !== 'object' || !m.role) continue;
+
+      // Preserve assistant tool calls for follow-up rounds.
+      if (m.role === 'assistant' && Array.isArray(m.tool_calls)) {
+        result.push({
+          role: 'assistant',
+          content: m.content ?? null,
+          tool_calls: m.tool_calls,
+        });
+        continue;
+      }
+
+      // Preserve tool_call_id on tool results, required by OpenAI-compatible APIs.
+      if (m.role === 'tool') {
+        const toolCallId = m.tool_call_id || m.toolCallId;
+        if (!toolCallId && this.isDev) {
+          console.error('[provider:openai] missing tool_call_id on tool message', m);
+        }
+        result.push({
+          role: 'tool',
+          content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content ?? ''),
+          tool_call_id: toolCallId,
+        });
+        continue;
+      }
+
+      if (m.role === 'user' || m.role === 'assistant') {
+        result.push({
+          role: m.role,
+          content: m.content,
+        });
+      }
     }
     return result;
   }
@@ -277,7 +305,13 @@ export class OpenAIProvider implements LLMProvider {
           }
 
           const toolCalls: NeutralToolCall[] = [];
-          for (const [, tc] of toolCallsInProgress) {
+          const completedToolCalls = Array.from(toolCallsInProgress.entries()).map(([index, tc]) => ({
+            id: tc.id || `tool_call_${index}`,
+            name: tc.name,
+            arguments: tc.arguments,
+          }));
+
+          for (const tc of completedToolCalls) {
             let parsedArgs: Record<string, string>;
             try {
               parsedArgs = JSON.parse(tc.arguments);
@@ -297,7 +331,7 @@ export class OpenAIProvider implements LLMProvider {
             content: textContent || null,
           };
           if (toolCalls.length > 0) {
-            rawAssistantMessage.tool_calls = Array.from(toolCallsInProgress.values()).map((tc) => ({
+            rawAssistantMessage.tool_calls = completedToolCalls.map((tc) => ({
               id: tc.id,
               type: 'function',
               function: {
@@ -328,9 +362,9 @@ export class OpenAIProvider implements LLMProvider {
     rawAssistantMessage: any,
     results: Array<{ toolCallId: string; content: string }>
   ): any[] {
-    const toolMessages = results.map((r) => ({
+    const toolMessages = results.map((r, index) => ({
       role: 'tool' as const,
-      tool_call_id: r.toolCallId,
+      tool_call_id: r.toolCallId || `tool_call_${index}`,
       content: r.content,
     }));
     return [rawAssistantMessage, ...toolMessages];
