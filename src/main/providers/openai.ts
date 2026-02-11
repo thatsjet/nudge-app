@@ -11,7 +11,19 @@ import {
 export class OpenAIProvider implements LLMProvider {
   id: string;
   private client: OpenAI | null = null;
-  private readonly isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+  private readonly isDev = process.argv.includes('--dev');
+
+  private fullDump(error: any): Record<string, any> {
+    const dump: Record<string, any> = {};
+    for (const key of Object.getOwnPropertyNames(error || {})) {
+      try {
+        dump[key] = (error as any)[key];
+      } catch (readError: any) {
+        dump[key] = `<unreadable: ${readError?.message || String(readError)}>`;
+      }
+    }
+    return dump;
+  }
 
   constructor(id: string = 'openai') {
     this.id = id;
@@ -30,15 +42,23 @@ export class OpenAIProvider implements LLMProvider {
         apiKey,
         ...(baseUrl ? { baseURL: baseUrl } : {}),
       });
-      await testClient.chat.completions.create({
+      const response = await testClient.chat.completions.create({
         model: this.id === 'custom' ? 'gpt-4o' : 'gpt-4o-mini',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       });
+      if (this.isDev) {
+        console.log('[provider:openai] validateKey success (full response)', {
+          providerId: this.id,
+          baseUrl: baseUrl || '(default)',
+          apiKeyLength: apiKey.length,
+        });
+        console.dir(response, { depth: null });
+      }
       return true;
     } catch (error: any) {
       if (this.isDev) {
-        console.error('[provider:openai] validateKey failed', {
+        console.error('[provider:openai] validateKey failed (summary)', {
           providerId: this.id,
           baseUrl: baseUrl || '(default)',
           apiKeyLength: apiKey.length,
@@ -47,6 +67,12 @@ export class OpenAIProvider implements LLMProvider {
           code: error?.code,
           type: error?.type,
         });
+        console.error('[provider:openai] validateKey failed (full error object)');
+        console.dir(this.fullDump(error), { depth: null });
+        if (error?.cause) {
+          console.error('[provider:openai] validateKey failed (cause)');
+          console.dir(error.cause, { depth: null });
+        }
       }
       return false;
     }

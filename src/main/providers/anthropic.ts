@@ -11,7 +11,19 @@ import {
 export class AnthropicProvider implements LLMProvider {
   id = 'anthropic';
   private client: Anthropic | null = null;
-  private readonly isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+  private readonly isDev = process.argv.includes('--dev');
+
+  private fullDump(error: any): Record<string, any> {
+    const dump: Record<string, any> = {};
+    for (const key of Object.getOwnPropertyNames(error || {})) {
+      try {
+        dump[key] = (error as any)[key];
+      } catch (readError: any) {
+        dump[key] = `<unreadable: ${readError?.message || String(readError)}>`;
+      }
+    }
+    return dump;
+  }
 
   configure(apiKey: string): void {
     this.client = new Anthropic({ apiKey });
@@ -20,21 +32,33 @@ export class AnthropicProvider implements LLMProvider {
   async validateKey(apiKey: string): Promise<boolean> {
     try {
       const testClient = new Anthropic({ apiKey });
-      await testClient.messages.create({
+      const response = await testClient.messages.create({
         model: 'claude-sonnet-4-6',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       });
+      if (this.isDev) {
+        console.log('[provider:anthropic] validateKey success (full response)', {
+          apiKeyLength: apiKey.length,
+        });
+        console.dir(response, { depth: null });
+      }
       return true;
     } catch (error: any) {
       if (this.isDev) {
-        console.error('[provider:anthropic] validateKey failed', {
+        console.error('[provider:anthropic] validateKey failed (summary)', {
           apiKeyLength: apiKey.length,
           message: error?.message || String(error),
           status: error?.status,
           code: error?.code,
           type: error?.type,
         });
+        console.error('[provider:anthropic] validateKey failed (full error object)');
+        console.dir(this.fullDump(error), { depth: null });
+        if (error?.cause) {
+          console.error('[provider:anthropic] validateKey failed (cause)');
+          console.dir(error.cause, { depth: null });
+        }
       }
       return false;
     }

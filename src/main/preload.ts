@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
-const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+const IS_DEV = process.argv.includes('--dev');
 let invokeSeq = 0;
 
 function truncate(value: string, max = 160): string {

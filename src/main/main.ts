@@ -6,7 +6,7 @@ import { VAULT_TOOLS } from './providers/tools';
 import { ProviderId } from './providers/types';
 
 let mainWindow: BrowserWindow | null = null;
-const IS_DEV = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+const IS_DEV = process.argv.includes('--dev');
 const DEV_LOG_DIR = 'logs';
 const DEV_LOG_FILE = 'dev.log';
 
