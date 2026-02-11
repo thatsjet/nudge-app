@@ -19,12 +19,11 @@ const PROVIDERS: Record<ProviderId, ProviderMeta> = {
   anthropic: {
     name: 'Anthropic',
     models: [
-      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
-      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
       { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
       { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
-      { value: 'claude-haiku-4-6', label: 'Claude Haiku 4.6' },
+      { value: 'claude-sonnet-4-0', label: 'Claude Sonnet 4' },
     ],
     keyPlaceholder: 'sk-ant-...',
     showBaseUrl: false,
@@ -72,7 +71,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     anthropic: '', openai: '', custom: '',
   });
   const [providerModels, setProviderModels] = useState<Record<ProviderId, string>>({
-    anthropic: 'claude-sonnet-4-6',
+    anthropic: 'claude-sonnet-4-5',
     openai: 'gpt-4o',
     custom: 'gpt-4o',
   });

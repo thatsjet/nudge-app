@@ -117,7 +117,7 @@ export default function App() {
       const systemPrompt = await buildSystemPrompt();
       const activeProvider = (await window.nudge.settings.get('activeProvider')) || 'anthropic';
       const model = (await window.nudge.settings.get(`model-${activeProvider}`))
-        || (activeProvider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o');
+        || (activeProvider === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o');
 
       const cancel = await window.nudge.api.sendMessage(
         updatedMessages,

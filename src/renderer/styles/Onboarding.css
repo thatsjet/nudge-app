@@ -196,6 +196,41 @@
   color: var(--accent);
 }
 
+/* --- Model Selection --- */
+
+.onboarding-model-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  justify-content: center;
+}
+
+.onboarding-model-card {
+  padding: 9px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.onboarding-model-card:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.onboarding-model-card--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-secondary);
+}
+
 .onboarding-vault-path {
   font-family: var(--font-mono);
   font-size: 14px;
@@ -228,4 +263,163 @@
 
 .onboarding-dot--done {
   background: var(--accent-light);
+}
+
+/* --- Wizard Navigation --- */
+
+.onboarding-wizard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 12px;
+}
+
+.onboarding-wizard-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.onboarding-nav-btn--back {
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.onboarding-nav-btn--back:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.onboarding-nav-btn--skip {
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 13px;
+}
+
+.onboarding-nav-btn--skip:hover {
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.onboarding-nav-arrow {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.onboarding-btn--nav {
+  margin-top: 0;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Textarea --- */
+
+.onboarding-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.6;
+  outline: none;
+  resize: vertical;
+  transition: border-color 150ms ease;
+}
+
+.onboarding-textarea:focus {
+  border-color: var(--accent);
+}
+
+.onboarding-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* --- Mantra Input --- */
+
+.onboarding-input--mantra {
+  text-align: center;
+  font-style: italic;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* --- Energy Grid --- */
+
+.onboarding-energy-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.onboarding-energy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-energy-label {
+  width: 80px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: left;
+  flex-shrink: 0;
+}
+
+.onboarding-energy-options {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.onboarding-energy-btn {
+  flex: 1;
+  padding: 7px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.onboarding-energy-btn:hover {
+  background: var(--bg-hover);
+}
+
+.onboarding-energy-btn--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--bg-secondary);
+  font-weight: 500;
+}
+
+/* --- Hint text on final step --- */
+
+.onboarding-text--hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: -4px;
 }

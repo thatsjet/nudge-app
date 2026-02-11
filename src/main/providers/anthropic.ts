@@ -30,7 +30,7 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async validateKey(apiKey: string, _baseUrl?: string, model?: string): Promise<boolean> {
-    const testModel = model || 'claude-sonnet-4-6';
+    const testModel = model || 'claude-sonnet-4-5';
     try {
       const testClient = new Anthropic({ apiKey });
       const response = await testClient.messages.create({
@@ -101,7 +101,7 @@ export class AnthropicProvider implements LLMProvider {
           if (!this.client) throw new Error('Anthropic client not configured');
 
           const stream = this.client.messages.stream({
-            model: params.model || 'claude-sonnet-4-6',
+            model: params.model || 'claude-sonnet-4-5',
             max_tokens: 4096,
             system: params.systemPrompt,
             messages: this.toAnthropicMessages(params.messages),
@@ -163,12 +163,11 @@ export class AnthropicProvider implements LLMProvider {
 
   getDefaultModels(): ModelOption[] {
     return [
-      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
-      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
       { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
-      { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+      { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+      { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
       { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
-      { value: 'claude-haiku-4-6', label: 'Claude Haiku 4.6' },
+      { value: 'claude-sonnet-4-0', label: 'Claude Sonnet 4' },
     ];
   }
 }
