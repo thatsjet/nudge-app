@@ -107,7 +107,7 @@ function loadSettings(): Record<string, any> {
   return {
     vaultPath: path.join(app.getPath('home'), 'Nudge'),
     theme: 'system',
-    model: 'claude-sonnet-4-6',
+    model: 'claude-sonnet-4-5',
     activeProvider: 'anthropic',
     onboardingComplete: false,
   };
