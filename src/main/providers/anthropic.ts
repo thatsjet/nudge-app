@@ -29,16 +29,18 @@ export class AnthropicProvider implements LLMProvider {
     this.client = new Anthropic({ apiKey });
   }
 
-  async validateKey(apiKey: string): Promise<boolean> {
+  async validateKey(apiKey: string, _baseUrl?: string, model?: string): Promise<boolean> {
+    const testModel = model || 'claude-sonnet-4-6';
     try {
       const testClient = new Anthropic({ apiKey });
       const response = await testClient.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: testModel,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       });
       if (this.isDev) {
         console.log('[provider:anthropic] validateKey success (full response)', {
+          model: testModel,
           apiKeyLength: apiKey.length,
         });
         console.dir(response, { depth: null });
@@ -47,6 +49,7 @@ export class AnthropicProvider implements LLMProvider {
     } catch (error: any) {
       if (this.isDev) {
         console.error('[provider:anthropic] validateKey failed (summary)', {
+          model: testModel,
           apiKeyLength: apiKey.length,
           message: error?.message || String(error),
           status: error?.status,

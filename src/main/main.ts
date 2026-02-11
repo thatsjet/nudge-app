@@ -571,18 +571,20 @@ ipcMain.handle('api:cancel-stream', async () => {
   }
 });
 
-ipcMain.handle('api:validate-key', async (_event, providerId: string, key: string, baseUrl?: string) => {
+ipcMain.handle('api:validate-key', async (_event, providerId: string, key: string, baseUrl?: string, model?: string) => {
   try {
     devLog('api:validate-key', 'start', {
       providerId,
       baseUrl: baseUrl || '(default)',
+      model: model || '(default)',
       keyLength: key?.length || 0,
     });
     const provider = getProvider(providerId as ProviderId);
-    const valid = await provider.validateKey(key, baseUrl);
+    const valid = await provider.validateKey(key, baseUrl, model);
     devLog('api:validate-key', 'result', {
       providerId,
       baseUrl: baseUrl || '(default)',
+      model: model || '(default)',
       valid,
     });
     return valid;
@@ -590,6 +592,7 @@ ipcMain.handle('api:validate-key', async (_event, providerId: string, key: strin
     devLog('api:validate-key', 'error', {
       providerId,
       baseUrl: baseUrl || '(default)',
+      model: model || '(default)',
       error: formatError(error),
     });
     return false;

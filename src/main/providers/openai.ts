@@ -144,7 +144,8 @@ export class OpenAIProvider implements LLMProvider {
     });
   }
 
-  async validateKey(apiKey: string, baseUrl?: string): Promise<boolean> {
+  async validateKey(apiKey: string, baseUrl?: string, model?: string): Promise<boolean> {
+    const testModel = model || (this.id === 'custom' ? 'gpt-4o' : 'gpt-4o-mini');
     try {
       if (this.isDev && this.id === 'custom' && baseUrl) {
         await this.logCertChain(baseUrl);
@@ -156,7 +157,7 @@ export class OpenAIProvider implements LLMProvider {
         ...(httpAgent ? { httpAgent } : {}),
       });
       const response = await testClient.chat.completions.create({
-        model: this.id === 'custom' ? 'gpt-4o' : 'gpt-4o-mini',
+        model: testModel,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       });
@@ -164,6 +165,7 @@ export class OpenAIProvider implements LLMProvider {
         console.log('[provider:openai] validateKey success (full response)', {
           providerId: this.id,
           baseUrl: baseUrl || '(default)',
+          model: testModel,
           apiKeyLength: apiKey.length,
         });
         console.dir(response, { depth: null });
@@ -174,6 +176,7 @@ export class OpenAIProvider implements LLMProvider {
         console.error('[provider:openai] validateKey failed (summary)', {
           providerId: this.id,
           baseUrl: baseUrl || '(default)',
+          model: testModel,
           apiKeyLength: apiKey.length,
           message: error?.message || String(error),
           status: error?.status,

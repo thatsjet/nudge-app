@@ -46,7 +46,7 @@ export interface LLMProvider {
   configure(apiKey: string, baseUrl?: string): void;
 
   // Validate that the API key (and optional baseUrl) works
-  validateKey(apiKey: string, baseUrl?: string): Promise<boolean>;
+  validateKey(apiKey: string, baseUrl?: string, model?: string): Promise<boolean>;
 
   // Send a streaming message, returns a promise that resolves when the round is done
   sendMessageStream(params: {

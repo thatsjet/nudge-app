@@ -58,7 +58,7 @@ export interface NudgeAPI {
       onDone: () => void,
       onError: (error: string) => void
     ) => Promise<() => void>;
-    validateKey: (provider: ProviderId, key: string, baseUrl?: string) => Promise<boolean>;
+    validateKey: (provider: ProviderId, key: string, baseUrl?: string, model?: string) => Promise<boolean>;
   };
   settings: {
     get: (key: string) => Promise<any>;

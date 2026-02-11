@@ -128,13 +128,14 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const handleValidateKey = async () => {
     const key = providerKeys[activeProvider].trim();
     if (!key) return;
+    const model = providerModels[activeProvider];
 
     setValidating(true);
     setKeyFeedback(null);
 
     try {
       const baseUrl = activeProvider === 'custom' ? customBaseUrl.trim() || undefined : undefined;
-      const valid = await window.nudge.api.validateKey(activeProvider, key, baseUrl);
+      const valid = await window.nudge.api.validateKey(activeProvider, key, baseUrl, model);
       if (valid) {
         await window.nudge.settings.setApiKey(activeProvider, key);
         if (baseUrl) {

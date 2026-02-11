@@ -52,6 +52,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [selectedProvider, setSelectedProvider] = useState<ProviderId>('anthropic');
   const [apiKey, setApiKey] = useState('');
   const [customBaseUrl, setCustomBaseUrl] = useState('');
+  const [customModel, setCustomModel] = useState('gpt-4o');
   const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -67,12 +68,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
     try {
       const baseUrl = selectedProvider === 'custom' ? customBaseUrl.trim() || undefined : undefined;
-      const valid = await window.nudge.api.validateKey(selectedProvider, apiKey.trim(), baseUrl);
+      const model = selectedProvider === 'custom' ? customModel.trim() : undefined;
+      const valid = await window.nudge.api.validateKey(selectedProvider, apiKey.trim(), baseUrl, model);
       if (valid) {
         await window.nudge.settings.setApiKey(selectedProvider, apiKey.trim());
         await window.nudge.settings.set('activeProvider', selectedProvider);
         if (baseUrl) {
           await window.nudge.settings.setProviderBaseUrl(selectedProvider, baseUrl);
+        }
+        if (selectedProvider === 'custom' && model) {
+          await window.nudge.settings.set('model-custom', model);
         }
         setFeedback({ type: 'success', message: 'Key validated successfully.' });
         setTimeout(() => setStep('vault'), 800);
@@ -182,16 +187,28 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               </a>
             )}
             {selectedProvider === 'custom' && (
-              <div className="onboarding-input-group">
-                <label className="onboarding-input-label">Base URL</label>
-                <input
-                  className="onboarding-input"
-                  type="text"
-                  value={customBaseUrl}
-                  onChange={(e) => setCustomBaseUrl(e.target.value)}
-                  placeholder="https://your-server.com/v1"
-                />
-              </div>
+              <>
+                <div className="onboarding-input-group">
+                  <label className="onboarding-input-label">Base URL</label>
+                  <input
+                    className="onboarding-input"
+                    type="text"
+                    value={customBaseUrl}
+                    onChange={(e) => setCustomBaseUrl(e.target.value)}
+                    placeholder="https://your-server.com/v1"
+                  />
+                </div>
+                <div className="onboarding-input-group">
+                  <label className="onboarding-input-label">Model</label>
+                  <input
+                    className="onboarding-input"
+                    type="text"
+                    value={customModel}
+                    onChange={(e) => { setCustomModel(e.target.value); setFeedback(null); }}
+                    placeholder="gpt-4o"
+                  />
+                </div>
+              </>
             )}
             <div className="onboarding-input-group">
               <label className="onboarding-input-label">API Key</label>
@@ -216,7 +233,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <button
               className="onboarding-btn onboarding-btn--primary"
               onClick={handleValidateKey}
-              disabled={validating || !apiKey.trim()}
+              disabled={validating || !apiKey.trim() || (selectedProvider === 'custom' && !customModel.trim())}
             >
               {validating ? 'Validating...' : 'Validate & Continue'}
             </button>

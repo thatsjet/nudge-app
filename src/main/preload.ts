@@ -78,6 +78,7 @@ function sanitizeInvokeArgs(channel: string, args: any[]): any {
       provider: args[0],
       keyLength: typeof args[1] === 'string' ? args[1].length : 0,
       baseUrl: args[2] || '(default)',
+      model: args[3] || '(default)',
     };
   }
   if (channel === 'settings:set-api-key') {
@@ -185,8 +186,8 @@ contextBridge.exposeInMainWorld('nudge', {
         });
       };
     },
-    validateKey: (provider: string, key: string, baseUrl?: string) =>
-      invoke('api:validate-key', provider, key, baseUrl),
+    validateKey: (provider: string, key: string, baseUrl?: string, model?: string) =>
+      invoke('api:validate-key', provider, key, baseUrl, model),
   },
   settings: {
     get: (key: string) => invoke('settings:get', key),
