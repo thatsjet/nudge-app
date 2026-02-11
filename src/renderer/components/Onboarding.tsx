@@ -58,7 +58,7 @@ const STEPS: Step[] = [
 
 const PROVIDER_OPTIONS: { id: ProviderId; name: string; description: string }[] = [
   { id: 'anthropic', name: 'Anthropic', description: 'Claude models (Sonnet, Opus, Haiku)' },
-  { id: 'openai', name: 'OpenAI', description: 'GPT-4o, GPT-4.1, o3-mini, and more' },
+  { id: 'openai', name: 'OpenAI', description: 'GPT-4o, GPT-4.1, GPT-5.2, and more' },
   { id: 'custom', name: 'Custom Server', description: 'Any OpenAI-compatible endpoint' },
 ];
 
@@ -79,11 +79,10 @@ const PROVIDER_MODELS: Record<ProviderId, { value: string; label: string }[]> = 
   openai: [
     { value: 'gpt-4o', label: 'GPT-4o' },
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'gpt-5.2', label: 'gpt-5.2' },
-    { value: 'gpt-5-mini', label: 'gpt-5-mini' },
-    { value: 'gpt-4.1', label: 'gpt-4.1' },
-    { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
-    { value: 'o3-mini', label: 'o3-mini' },
+    { value: 'gpt-4.1', label: 'GPT-4.1' },
+    { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+    { value: 'gpt-5.2', label: 'GPT-5.2' },
+    { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
   ],
   custom: [],
 };

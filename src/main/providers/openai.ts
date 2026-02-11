@@ -158,7 +158,7 @@ export class OpenAIProvider implements LLMProvider {
       });
       const response = await testClient.chat.completions.create({
         model: testModel,
-        max_tokens: 10,
+        max_completion_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       });
       if (this.isDev) {
@@ -265,7 +265,7 @@ export class OpenAIProvider implements LLMProvider {
 
           const stream = await this.client.chat.completions.create({
             model: params.model || 'gpt-4o',
-            max_tokens: 4096,
+            max_completion_tokens: 4096,
             messages: this.toOpenAIMessages(params.messages, params.systemPrompt),
             tools: this.toOpenAITools(params.tools),
             stream: true,
@@ -375,13 +375,12 @@ export class OpenAIProvider implements LLMProvider {
       return [{ value: 'gpt-4o', label: 'GPT-4o (default)' }];
     }
     return [
-      { value: 'gpt-5.2', label: 'gpt-5.2' },
-      { value: 'gpt-5-mini', label: 'gpt-5-mini' },
       { value: 'gpt-4o', label: 'GPT-4o' },
       { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-      { value: 'gpt-4.1', label: 'gpt-4.1' },
-      { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini' },
-      { value: 'o3-mini', label: 'o3-mini' },
+      { value: 'gpt-4.1', label: 'GPT-4.1' },
+      { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
+      { value: 'gpt-5.2', label: 'GPT-5.2' },
+      { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
     ];
   }
 }
