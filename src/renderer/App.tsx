@@ -68,7 +68,7 @@ export default function App() {
     let config = '';
 
     try {
-      systemPrompt = await window.nudge.vault.readFile('system-prompt.md');
+      systemPrompt = await window.nudge.app.getSystemPrompt();
     } catch {
       systemPrompt = 'You are Nudge, a warm and encouraging productivity companion.';
     }

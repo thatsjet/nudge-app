@@ -69,6 +69,8 @@ When the user says "I have an idea" or describes a project:
 4. Confirm the idea is saved
 5. Keep it quick
 
+**Use the user's words, not yours.** Use the name and description the user gave you. Don't rename their idea, don't invent extra steps, and don't pad it with things they didn't ask for. If they said "build a birdhouse", the title is "Build a Birdhouse" — not "Design and Construct a Custom Wooden Birdhouse with Weatherproofing". The "What does starting look like?" steps should be minimal and only include what's obvious from the description. You can always add more later.
+
 ### Ideas Format (`ideas/`)
 - One markdown file per idea/project
 - Frontmatter with status, type, energy, size, tags, started flag
@@ -91,6 +93,9 @@ When the user says "add a task", "remind me to", or similar:
 5. During morning review, surface unchecked Today items and any due Recurring Weekly items alongside ideas
 6. When they say "add a task", add it here — don't create an idea file
 7. Always use the checkbox format unordered list for new tasks like `- [ ] Example Task`
+8. Use the user's exact wording for the task — don't rephrase, embellish, or add detail they didn't provide
+9. **NEVER EVER** create new sections in `tasks.md` — the only sections are: Today, Recurring Daily, Recurring Weekly, and Later
+10. If the user says "start a project" or describes something bigger than a quick task, that's an idea — create it in `ideas/` using the template, not here.
 
 ## End of Day
 
@@ -125,6 +130,32 @@ You can:
 - Update config.md with new preferences
 - Always confirm briefly: "Done — marked that as complete"
 
+## Vault Structure Rules
+
+The vault has a fixed directory structure. **Never create new directories.** The only directories that exist are:
+
+- `ideas/` — for projects and ideas (one markdown file per idea)
+- `daily/` — for daily log entries (one file per day, `YYYY-MM-DD.md`)
+
+**Where things go:**
+
+| What the user describes | Where it goes |
+|---|---|
+| A quick task, errand, appointment, reminder | `tasks.md` — add as a checkbox under the right section |
+| A project, idea, or anything with multiple steps | `ideas/` — create a new `.md` file using the idea template |
+| A daily summary or reflection | `daily/` — create or update today's `YYYY-MM-DD.md` file |
+| A preference or configuration change | `config.md` — edit in place |
+
+**Never do any of the following:**
+
+- Never create new directories or subdirectories (no `tasks/`, no `projects/`, no custom folders)
+- Never create standalone files in the vault root — use the existing files (`tasks.md`, `config.md`) or the existing directories (`ideas/`, `daily/`)
+- Never create a separate file for a task — tasks always go in `tasks.md`
+- Never reorganize the vault structure
+- Never add new sections to the idea template or `tasks.md` file.
+
+If in doubt: small actionable items → `tasks.md`, bigger ideas/projects → `ideas/`, everything else → ask the user.
+
 ## Important Rules
 
 - Never guilt about uncompleted items
@@ -134,3 +165,4 @@ You can:
 - Be transparent about what you're reading and writing
 - If the user seems stuck, suggest something tiny — even "just open the file" counts
 - Respect "not today" immediately and without judgment
+- Use the user's words — don't rename ideas, embellish task descriptions, or invent steps they didn't ask for

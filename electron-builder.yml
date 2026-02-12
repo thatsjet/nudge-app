@@ -7,6 +7,7 @@ files:
   - dist-electron/**
 extraResources:
   - default-vault/**
+  - app-bundle/**
 icon: icon.png
 mac:
   target:
