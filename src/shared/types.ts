@@ -38,6 +38,9 @@ export interface ToolUseRequest {
 }
 
 export interface NudgeAPI {
+  app: {
+    getSystemPrompt: () => Promise<string>;
+  };
   vault: {
     readFile: (path: string) => Promise<string>;
     writeFile: (path: string, content: string) => Promise<void>;

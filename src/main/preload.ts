@@ -117,6 +117,9 @@ async function invoke<T>(channel: string, ...args: any[]): Promise<T> {
 }
 
 contextBridge.exposeInMainWorld('nudge', {
+  app: {
+    getSystemPrompt: () => invoke<string>('app:get-system-prompt'),
+  },
   vault: {
     readFile: (path: string) => invoke('vault:read-file', path),
     writeFile: (path: string, content: string) => invoke('vault:write-file', path, content),

@@ -195,6 +195,9 @@ function createWindow() {
 
 ipcMain.handle('vault:read-file', async (_event, relativePath: string) => {
   const fullPath = resolveVaultPath(relativePath);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`File not found: ${relativePath}`);
+  }
   return fs.readFileSync(fullPath, 'utf-8');
 });
 
@@ -242,13 +245,23 @@ ipcMain.handle('vault:get-path', async () => {
   return getVaultPath();
 });
 
+ipcMain.handle('app:get-system-prompt', async () => {
+  const bundledPath = path.join(
+    app.isPackaged
+      ? path.join(process.resourcesPath, 'app-bundle')
+      : path.join(__dirname, '../app-bundle'),
+    'system-prompt.md'
+  );
+  return fs.readFileSync(bundledPath, 'utf-8');
+});
+
 ipcMain.handle('vault:initialize', async (_event, vaultPath: string) => {
   ensureDir(vaultPath);
   // Copy default vault template
   const defaultVaultPath = path.join(
     app.isPackaged
       ? path.join(process.resourcesPath, 'default-vault')
-      : path.join(__dirname, '../../default-vault')
+      : path.join(__dirname, '../default-vault')
   );
 
   function copyDir(src: string, dest: string) {
