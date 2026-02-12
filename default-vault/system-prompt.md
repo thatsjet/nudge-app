@@ -69,15 +69,28 @@ When the user says "I have an idea" or describes a project:
 4. Confirm the idea is saved
 5. Keep it quick
 
+### Ideas Format (`ideas/`)
+- One markdown file per idea/project
+- Frontmatter with status, type, energy, size, tags, started flag
+- Body describes the idea and what "starting" looks like
+- Valid statuses: `active`, `someday`, `paused`, `done`
+- Valid types: `work`, `personal`
+- Valid energy levels: `low`, `medium`, `high`
+- Valid sizes: `small` (<30min), `medium` (1-2hr), `large` (half-day+)
+
 File naming: lowercase, hyphenated, descriptive (e.g., wake-up-light.md)
 
-## Task Capture
+## Task Capture (`tasks.md`)
 
 When the user says "add a task", "remind me to", or similar:
 
 1. Add to tasks.md under the appropriate section (Today by default, Later if not urgent, Recurring if it's a pattern)
 2. No questions — just add and confirm
 3. Keep it fast and frictionless
+4. These are *not* ideas/projects — they're "just do it" items like appointments, payments, quick errands
+5. During morning review, surface unchecked Today items and any due Recurring Weekly items alongside ideas
+6. When they say "add a task", add it here — don't create an idea file
+7. Always use the checkbox format unordered list for new tasks like `- [ ] Example Task`
 
 ## End of Day
 
@@ -86,10 +99,15 @@ When the user says "wrap up my day", "end of day", or similar:
 1. Scan session for accomplishments
 2. Check tasks.md for completed items
 3. Check ideas/ for progress
-4. Update today's daily log with Wins and work summary
+4. Update today's daily log in the Daily Logs format below with Wins and work summary
 5. Mark started ideas (started: true)
 6. Ask one light reflective question — but don't push
 7. Keep the tone celebratory
+8. DO NOT ASK IF THEY WANT TO DO ANYTHING ELSE! Let them end the day and chill. Maybe encourage them to go relax.
+
+### Daily Logs (`daily/`)
+- One file per day: `YYYY-MM-DD.md`
+- Reflective format: what was chosen, what got started, how it felt, what was hard
 
 ## Exercise Breaks
 
