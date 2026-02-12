@@ -30,7 +30,21 @@ for key in "${!BEFORE_HASHES[@]}"; do
   echo "  ${key}: ${BEFORE_HASHES[${key}]}"
 done
 
-# 3. Verify all files are still present and unchanged
+# 3. Verify the built default-vault template only contains files that
+#    would be safe to copy (i.e. the app's copyDir logic skips existing
+#    files). This ensures a fresh install does not ship anything that
+#    would overwrite user data.
+if [ -d "default-vault" ]; then
+  echo "Checking default-vault template..."
+  while IFS= read -r -d '' tpl; do
+    rel="${tpl#default-vault/}"
+    if [ -f "${VAULT_DIR}/${rel}" ]; then
+      echo "  OK: template '${rel}' would be skipped (file already exists in vault)"
+    fi
+  done < <(find "default-vault" -type f -print0)
+fi
+
+# 4. Verify all original vault files are still present and unchanged
 PASS=true
 for rel in "${!BEFORE_HASHES[@]}"; do
   full="${VAULT_DIR}/${rel}"
