@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import MDEditor, { commands } from '@uiw/react-md-editor';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import '../styles/FileEditor.css';
 
 interface FileEditorProps {
@@ -60,6 +59,69 @@ function LineNumbers({
   );
 }
 
+// Toolbar helpers: wrap selection or insert at cursor
+function wrapSelection(ta: HTMLTextAreaElement, before: string, after: string) {
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = ta.value;
+  const selected = text.slice(start, end);
+  const replacement = before + (selected || 'text') + after;
+  // Use execCommand to preserve undo history
+  ta.focus();
+  document.execCommand('insertText', false, replacement);
+  // Select inner text if nothing was selected
+  if (!selected) {
+    ta.setSelectionRange(start + before.length, start + before.length + 4);
+  }
+}
+
+function prefixLines(ta: HTMLTextAreaElement, prefix: string) {
+  const start = ta.selectionStart;
+  const end = ta.selectionEnd;
+  const text = ta.value;
+  // Find line boundaries
+  const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+  const lineEnd = text.indexOf('\n', end);
+  const blockEnd = lineEnd === -1 ? text.length : lineEnd;
+  const block = text.slice(lineStart, blockEnd);
+  const prefixed = block.split('\n').map(line => prefix + line).join('\n');
+  ta.setSelectionRange(lineStart, blockEnd);
+  ta.focus();
+  document.execCommand('insertText', false, prefixed);
+}
+
+function insertAtCursor(ta: HTMLTextAreaElement, text: string) {
+  ta.focus();
+  document.execCommand('insertText', false, text);
+}
+
+interface ToolbarAction {
+  label: string;
+  title: string;
+  icon: string;
+  action: (ta: HTMLTextAreaElement) => void;
+}
+
+const TOOLBAR_ACTIONS: (ToolbarAction | 'divider')[] = [
+  { label: 'B', title: 'Bold', icon: 'B', action: (ta) => wrapSelection(ta, '**', '**') },
+  { label: 'I', title: 'Italic', icon: 'I', action: (ta) => wrapSelection(ta, '_', '_') },
+  { label: 'S', title: 'Strikethrough', icon: 'S', action: (ta) => wrapSelection(ta, '~~', '~~') },
+  'divider',
+  { label: 'Link', title: 'Link', icon: '🔗', action: (ta) => {
+    const sel = ta.value.slice(ta.selectionStart, ta.selectionEnd);
+    const text = sel || 'text';
+    ta.focus();
+    document.execCommand('insertText', false, `[${text}](url)`);
+  }},
+  { label: 'Quote', title: 'Quote', icon: '❝', action: (ta) => prefixLines(ta, '> ') },
+  { label: 'Code', title: 'Inline code', icon: '`', action: (ta) => wrapSelection(ta, '`', '`') },
+  { label: 'Block', title: 'Code block', icon: '```', action: (ta) => wrapSelection(ta, '```\n', '\n```') },
+  'divider',
+  { label: 'UL', title: 'Bullet list', icon: '•', action: (ta) => prefixLines(ta, '- ') },
+  { label: 'OL', title: 'Numbered list', icon: '1.', action: (ta) => prefixLines(ta, '1. ') },
+  { label: 'Check', title: 'Checklist', icon: '☑', action: (ta) => prefixLines(ta, '- [ ] ') },
+];
+
 export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -72,6 +134,7 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   const currentPathRef = useRef<string | null>(null);
   const contentRef = useRef(content);
   contentRef.current = content;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const isDark = useIsDark();
 
@@ -106,76 +169,33 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
     };
   }, [filePath]);
 
-  // Sync scroll position from the editor's scrollable area to line numbers
-  useEffect(() => {
-    if (!showLineNumbers || loading) return;
-    const container = editorBodyRef.current;
-    if (!container) return;
-
-    let cancelled = false;
-    let scrollArea: Element | null = null;
-
-    const onScroll = () => {
-      if (scrollArea) setScrollTop(scrollArea.scrollTop);
-    };
-
-    // The MDEditor may not have rendered .w-md-editor-area yet when this
-    // effect first runs. Use a MutationObserver to detect when it appears.
-    const attach = () => {
-      scrollArea = container.querySelector('.w-md-editor-area');
-      if (scrollArea) {
-        scrollArea.addEventListener('scroll', onScroll, { passive: true });
-        return true;
-      }
-      return false;
-    };
-
-    if (!attach()) {
-      const observer = new MutationObserver(() => {
-        if (!cancelled && attach()) {
-          observer.disconnect();
-        }
-      });
-      observer.observe(container, { childList: true, subtree: true });
-      return () => {
-        cancelled = true;
-        observer.disconnect();
-        if (scrollArea) scrollArea.removeEventListener('scroll', onScroll);
-      };
+  // Sync scroll position from the textarea to line numbers
+  const handleScroll = useCallback(() => {
+    if (textareaRef.current) {
+      setScrollTop(textareaRef.current.scrollTop);
     }
-
-    return () => {
-      cancelled = true;
-      if (scrollArea) scrollArea.removeEventListener('scroll', onScroll);
-    };
-  }, [showLineNumbers, loading, filePath]);
+  }, []);
 
   // Measure rendered line heights when word wrap is on so gutter stays aligned.
-  // Uses an offscreen <pre> element styled identically to the editor to measure
-  // how tall each logical line renders at the current editor width.
   useEffect(() => {
     if (!wordWrap || !showLineNumbers || loading) {
       setLineHeights(null);
       return;
     }
 
-    const container = editorBodyRef.current;
-    if (!container) return;
+    const ta = textareaRef.current;
+    if (!ta) return;
 
     let cancelled = false;
     let rafId: number | null = null;
     let measurer: HTMLPreElement | null = null;
 
     const measure = () => {
-      if (cancelled) return;
-      const editorArea = container.querySelector('.w-md-editor-area');
-      const preEl = container.querySelector('.w-md-editor-text-pre');
-      if (!editorArea || !preEl) return;
+      if (cancelled || !ta) return;
 
-      // Create or reuse the offscreen measurer
       if (!measurer) {
         measurer = document.createElement('pre');
-        const styles = window.getComputedStyle(preEl);
+        const styles = window.getComputedStyle(ta);
         measurer.style.cssText = `
           position: absolute; visibility: hidden; pointer-events: none;
           font-family: ${styles.fontFamily};
@@ -187,27 +207,23 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
           overflow-wrap: break-word;
           box-sizing: border-box;
         `;
-        container.appendChild(measurer);
+        ta.parentElement?.appendChild(measurer);
       }
 
-      // Match the editor's content width
-      measurer.style.width = `${editorArea.clientWidth}px`;
+      measurer.style.width = `${ta.clientWidth}px`;
 
       const lines = content.split('\n');
-      const heights: number[] = [];
-
-      // Batch: set all lines at once, measure via a wrapper per line
       measurer.innerHTML = '';
       for (const line of lines) {
         const div = document.createElement('div');
         div.style.whiteSpace = 'pre-wrap';
         div.style.wordWrap = 'break-word';
         div.style.overflowWrap = 'break-word';
-        // Use a zero-width space for empty lines so they still have height
         div.textContent = line || '\u200b';
         measurer.appendChild(div);
       }
 
+      const heights: number[] = [];
       for (let i = 0; i < measurer.children.length; i++) {
         heights.push((measurer.children[i] as HTMLElement).getBoundingClientRect().height);
       }
@@ -215,54 +231,21 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
       if (!cancelled) setLineHeights(heights);
     };
 
-    const startMeasuring = () => {
-      const editorArea = container.querySelector('.w-md-editor-area');
-      if (!editorArea) return false;
+    measure();
 
-      measure();
-
-      // Re-measure when the editor area resizes (e.g. window resize)
-      const ro = new ResizeObserver(() => {
-        if (!cancelled) {
-          if (rafId !== null) cancelAnimationFrame(rafId);
-          rafId = requestAnimationFrame(measure);
-        }
-      });
-      ro.observe(editorArea);
-
-      return () => {
-        ro.disconnect();
+    const ro = new ResizeObserver(() => {
+      if (!cancelled) {
         if (rafId !== null) cancelAnimationFrame(rafId);
-        if (measurer) {
-          measurer.remove();
-          measurer = null;
-        }
-      };
-    };
-
-    const cleanup = startMeasuring();
-    if (cleanup) {
-      return () => {
-        cancelled = true;
-        cleanup();
-      };
-    }
-
-    // Editor might not be ready yet — wait for it
-    let cleanupRef: (() => void) | null = null;
-    const observer = new MutationObserver(() => {
-      if (cancelled) return;
-      const result = startMeasuring();
-      if (result) {
-        observer.disconnect();
-        cleanupRef = result;
+        rafId = requestAnimationFrame(measure);
       }
     });
-    observer.observe(container, { childList: true, subtree: true });
+    ro.observe(ta);
+
     return () => {
       cancelled = true;
-      observer.disconnect();
-      cleanupRef?.();
+      ro.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (measurer) measurer.remove();
     };
   }, [wordWrap, showLineNumbers, loading, content, filePath]);
 
@@ -277,8 +260,8 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
     }
   }, []);
 
-  const handleChange = useCallback((value?: string) => {
-    const newContent = value ?? '';
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
     setContent(newContent);
     setSaveStatus('unsaved');
 
@@ -290,6 +273,14 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
       saveFile(newContent);
     }, 1000);
   }, [saveFile]);
+
+  // Handle Tab key for indentation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      insertAtCursor(e.currentTarget, '  ');
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -303,7 +294,6 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   useEffect(() => {
     if (!filePath) return;
     return window.nudge.app.onMenuSave(() => {
-      // Cancel any pending debounced save and save immediately
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
@@ -312,38 +302,19 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
     });
   }, [filePath, saveFile]);
 
-  // Prevent the MDEditor textarea from swallowing system shortcuts (Cmd+Q, Cmd+C, etc.)
-  // The editor's internal code-editor intercepts keydown and inserts characters for some
-  // Cmd/Ctrl combos. We stop propagation at the capture phase so Electron's menu
-  // accelerators receive them instead.
-  useEffect(() => {
-    const container = editorBodyRef.current;
-    if (!container) return;
-
-    const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      // Allow Cmd+A (select all) — the editor handles it correctly
-      // Allow Cmd+Z / Cmd+Shift+Z (undo/redo) — the editor handles them correctly
-      const key = e.key.toLowerCase();
-      if (key === 'a' || key === 'z') return;
-      // For all other Cmd/Ctrl combos, stop the editor from processing them
-      // so Electron's menu accelerators (quit, copy, cut, paste, save, etc.) work
-      e.stopPropagation();
-    };
-
-    container.addEventListener('keydown', handler, true);
-    return () => container.removeEventListener('keydown', handler, true);
-  }, [loading]);
-
-  const toolbarCommands = useMemo(() => [
-    commands.bold, commands.italic, commands.strikethrough, commands.divider,
-    commands.link, commands.quote, commands.code, commands.codeBlock, commands.image, commands.divider,
-    commands.unorderedListCommand, commands.orderedListCommand, commands.checkedListCommand,
-  ], []);
-
-  const extraToolbarCommands = useMemo(() => [
-    commands.codeEdit, commands.codeLive, commands.codePreview,
-  ], []);
+  const handleToolbarAction = useCallback((action: (ta: HTMLTextAreaElement) => void) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    action(ta);
+    // Sync content after toolbar action modifies the textarea
+    setTimeout(() => {
+      const newContent = ta.value;
+      setContent(newContent);
+      setSaveStatus('unsaved');
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(() => saveFile(newContent), 1000);
+    }, 0);
+  }, [saveFile]);
 
   if (!filePath) return null;
 
@@ -398,32 +369,45 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
       {loading ? (
         <div className="file-editor-loading">Loading...</div>
       ) : (
-        <div
-          ref={editorBodyRef}
-          className={`file-editor-body ${showLineNumbers ? 'show-line-numbers' : ''} ${wordWrap ? 'word-wrap' : ''}`}
-        >
-          {showLineNumbers && (
-            <div className="file-editor-gutter">
-              <LineNumbers content={content} scrollTop={scrollTop} lineHeights={lineHeights} />
-            </div>
-          )}
-          <MDEditor
-            value={content}
-            onChange={handleChange}
-            preview="edit"
-            height="100%"
-            visibleDragbar={false}
-            tabSize={2}
-            defaultTabEnable={false}
-            commands={toolbarCommands}
-            extraCommands={extraToolbarCommands}
-            data-color-mode={isDark ? 'dark' : 'light'}
-            textareaProps={{
-              placeholder: 'Empty file',
-              spellCheck: false,
-            }}
-          />
-        </div>
+        <>
+          <div className="file-editor-toolbar">
+            {TOOLBAR_ACTIONS.map((item, i) =>
+              item === 'divider' ? (
+                <span key={i} className="file-editor-toolbar-divider" />
+              ) : (
+                <button
+                  key={item.title}
+                  className="file-editor-toolbar-btn"
+                  title={item.title}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleToolbarAction(item.action)}
+                >
+                  {item.icon}
+                </button>
+              )
+            )}
+          </div>
+          <div
+            ref={editorBodyRef}
+            className={`file-editor-body ${showLineNumbers ? 'show-line-numbers' : ''} ${wordWrap ? 'word-wrap' : ''}`}
+          >
+            {showLineNumbers && (
+              <div className="file-editor-gutter">
+                <LineNumbers content={content} scrollTop={scrollTop} lineHeights={lineHeights} />
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              className="file-editor-textarea"
+              value={content}
+              onChange={handleChange}
+              onScroll={handleScroll}
+              onKeyDown={handleKeyDown}
+              placeholder="Empty file"
+              spellCheck={false}
+            />
+          </div>
+        </>
       )}
     </div>
   );

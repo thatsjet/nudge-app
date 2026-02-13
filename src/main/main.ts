@@ -464,7 +464,7 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
     systemPromptLength: typeof systemPrompt === 'string' ? systemPrompt.length : 0,
   });
   try {
-    const provider = getProvider(providerId as ProviderId);
+    const provider = await getProvider(providerId as ProviderId);
 
     // Get API key and configure provider
     let apiKey: string | null = null;
@@ -592,7 +592,7 @@ ipcMain.handle('api:validate-key', async (_event, providerId: string, key: strin
       model: model || '(default)',
       keyLength: key?.length || 0,
     });
-    const provider = getProvider(providerId as ProviderId);
+    const provider = await getProvider(providerId as ProviderId);
     const valid = await provider.validateKey(key, baseUrl, model);
     devLog('api:validate-key', 'result', {
       providerId,
