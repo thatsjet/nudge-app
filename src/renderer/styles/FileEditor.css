@@ -59,23 +59,42 @@
   color: var(--accent-light);
 }
 
-.file-editor-textarea {
-  flex: 1;
-  width: 100%;
-  padding: 16px;
-  border: none;
-  outline: none;
-  resize: none;
-  background: var(--bg-chat);
-  color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.7;
-  tab-size: 2;
+/* Line number toggle button */
+.file-editor-line-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+  border: 1px solid transparent;
 }
 
-.file-editor-textarea::placeholder {
-  color: var(--text-muted);
+.file-editor-line-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.file-editor-line-toggle.active {
+  color: var(--accent);
+  background: var(--bg-secondary);
+  border-color: var(--border-light);
+}
+
+.file-editor-line-toggle-label {
+  font-family: var(--font-sans);
+  line-height: 1;
+}
+
+/* Editor body */
+.file-editor-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
 }
 
 .file-editor-loading {
@@ -85,4 +104,111 @@
   flex: 1;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+/* Line number gutter */
+.file-editor-gutter {
+  flex-shrink: 0;
+  width: 48px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-light);
+  overflow: hidden;
+  user-select: none;
+  position: relative;
+}
+
+/* Push the gutter content below the toolbar row and constrain height */
+.file-editor-body.show-line-numbers .file-editor-gutter {
+  margin-top: 35px;
+  height: calc(100% - 35px);
+}
+
+.file-editor-line-numbers {
+  padding-top: 10px;
+  will-change: transform;
+}
+
+.file-editor-line-number {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  text-align: right;
+  padding-right: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* MDEditor fills remaining space */
+.file-editor-body .w-md-editor {
+  flex: 1;
+  min-width: 0;
+  height: 100% !important;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg-chat);
+  color: var(--text-primary);
+}
+
+.file-editor-body .w-md-editor-toolbar {
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  min-height: auto;
+  padding: 4px 8px;
+}
+
+.file-editor-body .w-md-editor-toolbar li > button {
+  color: var(--text-secondary);
+  height: 26px;
+  width: 26px;
+}
+
+.file-editor-body .w-md-editor-toolbar li > button:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.file-editor-body .w-md-editor-toolbar li.active > button {
+  color: var(--accent);
+}
+
+/* Editor content area */
+.file-editor-body .w-md-editor-content {
+  height: calc(100% - 35px) !important;
+}
+
+.file-editor-body .w-md-editor-area {
+  overflow: auto !important;
+}
+
+.file-editor-body .w-md-editor-text-pre,
+.file-editor-body .w-md-editor-text-input,
+.file-editor-body .w-md-editor-text-pre > code {
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+  white-space: pre !important;
+  word-wrap: normal !important;
+  overflow-wrap: normal !important;
+}
+
+/* Word wrap mode */
+.file-editor-body.word-wrap .w-md-editor-text-pre,
+.file-editor-body.word-wrap .w-md-editor-text-input,
+.file-editor-body.word-wrap .w-md-editor-text-pre > code {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.file-editor-body .w-md-editor-text-input {
+  -webkit-text-fill-color: inherit !important;
+}
+
+/* Preview pane styling */
+.file-editor-body .w-md-editor-preview .wmde-markdown {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--bg-chat);
+  color: var(--text-primary);
 }
