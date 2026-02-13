@@ -70,6 +70,8 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   const [lineHeights, setLineHeights] = useState<number[] | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentPathRef = useRef<string | null>(null);
+  const contentRef = useRef(content);
+  contentRef.current = content;
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const isDark = useIsDark();
 
@@ -296,6 +298,42 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
       }
     };
   }, []);
+
+  // Listen for Cmd+S / Ctrl+S via the application menu
+  useEffect(() => {
+    if (!filePath) return;
+    return window.nudge.app.onMenuSave(() => {
+      // Cancel any pending debounced save and save immediately
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      saveFile(contentRef.current);
+    });
+  }, [filePath, saveFile]);
+
+  // Prevent the MDEditor textarea from swallowing system shortcuts (Cmd+Q, Cmd+C, etc.)
+  // The editor's internal code-editor intercepts keydown and inserts characters for some
+  // Cmd/Ctrl combos. We stop propagation at the capture phase so Electron's menu
+  // accelerators receive them instead.
+  useEffect(() => {
+    const container = editorBodyRef.current;
+    if (!container) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      // Allow Cmd+A (select all) — the editor handles it correctly
+      // Allow Cmd+Z / Cmd+Shift+Z (undo/redo) — the editor handles them correctly
+      const key = e.key.toLowerCase();
+      if (key === 'a' || key === 'z') return;
+      // For all other Cmd/Ctrl combos, stop the editor from processing them
+      // so Electron's menu accelerators (quit, copy, cut, paste, save, etc.) work
+      e.stopPropagation();
+    };
+
+    container.addEventListener('keydown', handler, true);
+    return () => container.removeEventListener('keydown', handler, true);
+  }, [loading]);
 
   const toolbarCommands = useMemo(() => [
     commands.bold, commands.italic, commands.strikethrough, commands.divider,

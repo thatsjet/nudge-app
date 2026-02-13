@@ -40,6 +40,7 @@ export interface ToolUseRequest {
 export interface NudgeAPI {
   app: {
     getSystemPrompt: () => Promise<string>;
+    onMenuSave: (callback: () => void) => () => void;
   };
   vault: {
     readFile: (path: string) => Promise<string>;
