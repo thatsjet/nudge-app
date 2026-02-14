@@ -6,6 +6,10 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
+      tag:
+        description: 'Tag to release (e.g. v0.2.0)'
+        required: true
+        type: string
       draft:
         description: 'Create as draft release'
         required: false
@@ -250,6 +254,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           draft: ${{ steps.draft.outputs.is_draft == 'true' }}
           generate_release_notes: true
           files: |
