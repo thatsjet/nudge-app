@@ -18,17 +18,18 @@ echo "# My Tasks"$'\n'"Important user data" > "${VAULT_DIR}/tasks.md"
 echo "# My Config"$'\n'"Custom settings" > "${VAULT_DIR}/config.md"
 echo "# My Idea"$'\n'"Do not delete" > "${VAULT_DIR}/ideas/my-idea.md"
 
-# 2. Record SHA256 hashes of every file before
-declare -A BEFORE_HASHES
+# 2. Record SHA256 hashes of every file before (bash 3.x compatible — no associative arrays)
+HASH_FILE="$(mktemp)"
 while IFS= read -r -d '' file; do
   rel="${file#"${VAULT_DIR}/"}"
-  BEFORE_HASHES["${rel}"]="$(sha256sum "${file}" | awk '{print $1}')"
+  hash="$(sha256sum "${file}" | awk '{print $1}')"
+  echo "${rel}=${hash}" >> "${HASH_FILE}"
 done < <(find "${VAULT_DIR}" -type f -print0)
 
 echo "Files recorded before test:"
-for key in "${!BEFORE_HASHES[@]}"; do
-  echo "  ${key}: ${BEFORE_HASHES[${key}]}"
-done
+while IFS='=' read -r key value; do
+  echo "  ${key}: ${value}"
+done < "${HASH_FILE}"
 
 # 3. Verify the built default-vault template only contains files that
 #    would be safe to copy (i.e. the app's copyDir logic skips existing
@@ -46,7 +47,7 @@ fi
 
 # 4. Verify all original vault files are still present and unchanged
 PASS=true
-for rel in "${!BEFORE_HASHES[@]}"; do
+while IFS='=' read -r rel expected_hash; do
   full="${VAULT_DIR}/${rel}"
   if [ ! -f "${full}" ]; then
     echo "FAIL: File missing: ${rel}"
@@ -54,11 +55,13 @@ for rel in "${!BEFORE_HASHES[@]}"; do
     continue
   fi
   after_hash="$(sha256sum "${full}" | awk '{print $1}')"
-  if [ "${after_hash}" != "${BEFORE_HASHES[${rel}]}" ]; then
+  if [ "${after_hash}" != "${expected_hash}" ]; then
     echo "FAIL: File content changed: ${rel}"
     PASS=false
   fi
-done
+done < "${HASH_FILE}"
+
+rm -f "${HASH_FILE}"
 
 if [ "${PASS}" = true ]; then
   echo "PASS: Vault preservation test passed — all user files intact"
