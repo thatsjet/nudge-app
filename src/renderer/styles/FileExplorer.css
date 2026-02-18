@@ -113,3 +113,19 @@
   font-size: 13px;
   text-align: center;
 }
+
+.file-explorer-priority {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.file-explorer-priority--high {
+  background: var(--priority-high, #e53e3e);
+}
+
+.file-explorer-priority--low {
+  background: var(--priority-low, #a0aec0);
+}

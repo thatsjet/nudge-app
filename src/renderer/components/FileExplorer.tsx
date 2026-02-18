@@ -19,6 +19,7 @@ interface TreeEntry {
 export default function FileExplorer({ isOpen, onClose, onFileSelect }: FileExplorerProps) {
   const [entries, setEntries] = useState<TreeEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [priorities, setPriorities] = useState<Record<string, string>>({});
 
   const loadDirectory = useCallback(async (directory: string): Promise<TreeEntry[]> => {
     try {
@@ -43,12 +44,27 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect }: FileExpl
     }
   }, []);
 
+  const loadPriorities = useCallback(async (entries: TreeEntry[]) => {
+    const ideaEntries = entries.find(e => e.name === 'ideas' && e.isDirectory);
+    if (!ideaEntries) return;
+    const ideaFiles = await window.nudge.vault.listFiles('ideas');
+    const newPriorities: Record<string, string> = {};
+    for (const file of ideaFiles.filter((f: any) => !f.isDirectory && f.name.endsWith('.md') && f.name !== '_template.md')) {
+      const frontmatter = await window.nudge.vault.readFrontmatter(file.path);
+      if (frontmatter?.priority && frontmatter.priority !== 'medium') {
+        newPriorities[file.path] = frontmatter.priority;
+      }
+    }
+    setPriorities(newPriorities);
+  }, []);
+
   const loadRoot = useCallback(async () => {
     setLoading(true);
     const root = await loadDirectory('');
     setEntries(root);
     setLoading(false);
-  }, [loadDirectory]);
+    loadPriorities(root);
+  }, [loadDirectory, loadPriorities]);
 
   useEffect(() => {
     if (isOpen) {
@@ -102,6 +118,9 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect }: FileExpl
           {entry.isDirectory ? '\uD83D\uDCC1' : '\uD83D\uDCC4'}
         </span>
         <span className="file-explorer-name">{entry.name}</span>
+        {priorities[entry.path] && (
+          <span className={`file-explorer-priority file-explorer-priority--${priorities[entry.path]}`} />
+        )}
       </div>
       {entry.isDirectory && entry.expanded && entry.children && (
         <div className="file-explorer-children">
