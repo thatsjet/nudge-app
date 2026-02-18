@@ -241,6 +241,19 @@ ipcMain.handle('vault:create-file', async (_event, relativePath: string, content
   fs.writeFileSync(fullPath, content, 'utf-8');
 });
 
+ipcMain.handle('vault:move-file', async (_event, sourcePath: string, destPath: string) => {
+  const fullSource = resolveVaultPath(sourcePath);
+  const fullDest = resolveVaultPath(destPath);
+  if (!fs.existsSync(fullSource)) {
+    throw new Error(`Source file not found: ${sourcePath}`);
+  }
+  if (fs.existsSync(fullDest)) {
+    throw new Error(`Destination file already exists: ${destPath}`);
+  }
+  ensureDir(path.dirname(fullDest));
+  fs.renameSync(fullSource, fullDest);
+});
+
 ipcMain.handle('vault:get-path', async () => {
   return getVaultPath();
 });
@@ -272,7 +285,7 @@ ipcMain.handle('vault:initialize', async (_event, vaultPath: string) => {
       const destPath = path.join(dest, entry.name);
       if (entry.isDirectory()) {
         copyDir(srcPath, destPath);
-      } else if (!fs.existsSync(destPath)) {
+      } else if (entry.name !== '.gitkeep' && !fs.existsSync(destPath)) {
         fs.copyFileSync(srcPath, destPath);
       }
     }
@@ -284,6 +297,7 @@ ipcMain.handle('vault:initialize', async (_event, vaultPath: string) => {
     // Create minimal structure if default-vault not found
     ensureDir(path.join(vaultPath, 'ideas'));
     ensureDir(path.join(vaultPath, 'daily'));
+    ensureDir(path.join(vaultPath, 'archive'));
     if (!fs.existsSync(path.join(vaultPath, 'tasks.md'))) {
       fs.writeFileSync(path.join(vaultPath, 'tasks.md'), '# Tasks\n\nQuick things to do.\n\n## Today\n\n## Recurring Daily\n\n## Recurring Weekly\n\n## Later\n');
     }
@@ -446,6 +460,73 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       ensureDir(path.dirname(fullPath));
       fs.writeFileSync(fullPath, toolInput.content, 'utf-8');
       return `File created: ${toolInput.path}`;
+    }
+    case 'move_file': {
+      const srcPath = path.resolve(vaultPath, toolInput.source);
+      const destPath = path.resolve(vaultPath, toolInput.destination);
+      if (!srcPath.startsWith(vaultPath)) throw new Error('Source path outside vault');
+      if (!destPath.startsWith(vaultPath)) throw new Error('Destination path outside vault');
+      if (!fs.existsSync(srcPath)) return `Error: Source file not found: ${toolInput.source}`;
+      if (fs.existsSync(destPath)) return `Error: Destination file already exists: ${toolInput.destination}`;
+      ensureDir(path.dirname(destPath));
+      fs.renameSync(srcPath, destPath);
+      return `File moved: ${toolInput.source} → ${toolInput.destination}`;
+    }
+    case 'archive_tasks': {
+      const tasksPath = path.resolve(vaultPath, 'tasks.md');
+      if (!fs.existsSync(tasksPath)) return 'Error: tasks.md not found';
+
+      const content = fs.readFileSync(tasksPath, 'utf-8');
+      const lines = content.split('\n');
+
+      const completedTasks: string[] = [];
+      const remainingLines: string[] = [];
+
+      // Only archive completed tasks from the "Today" section.
+      // Recurring sections (Recurring Daily, Recurring Weekly) are skipped
+      // so checked-off recurring tasks are not permanently removed.
+      let inTodaySection = false;
+      for (const line of lines) {
+        const isHeading = /^#+\s/.test(line);
+        if (isHeading) {
+          inTodaySection = /^#+\s+Today\b/i.test(line);
+        }
+
+        if (inTodaySection && /^\s*- \[x\]\s/i.test(line)) {
+          completedTasks.push(line.replace(/^\s*- \[x\]\s*/i, '- '));
+        } else {
+          remainingLines.push(line);
+        }
+      }
+
+      if (completedTasks.length === 0) {
+        return 'No completed tasks found in the Today section to archive.';
+      }
+
+      // Write updated tasks.md with completed Today tasks removed
+      fs.writeFileSync(tasksPath, remainingLines.join('\n'), 'utf-8');
+
+      // Append to archive/archived_tasks.md, deduplicating same-day headers
+      const archivePath = path.resolve(vaultPath, 'archive/archived_tasks.md');
+      ensureDir(path.dirname(archivePath));
+
+      const archivedContent = completedTasks.join('\n') + '\n';
+      const dateMarker = `## ${toolInput.date}`;
+
+      if (fs.existsSync(archivePath)) {
+        const existing = fs.readFileSync(archivePath, 'utf-8');
+        if (existing.includes(dateMarker)) {
+          // Append under the existing date header (no duplicate heading)
+          fs.writeFileSync(archivePath, existing.trimEnd() + '\n' + archivedContent, 'utf-8');
+        } else {
+          fs.writeFileSync(archivePath, existing + `\n${dateMarker}\n\n` + archivedContent, 'utf-8');
+        }
+      } else {
+        const header = '# Archived Tasks\n\nCompleted tasks, organized by date.\n';
+        fs.writeFileSync(archivePath, header + `\n${dateMarker}\n\n` + archivedContent, 'utf-8');
+      }
+
+      return `Archived ${completedTasks.length} completed task(s) under ${toolInput.date}.`;
     }
     default:
       return `Unknown tool: ${toolName}`;
@@ -708,6 +789,12 @@ app.whenReady().then(async () => {
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
+  // Ensure archive/ directory exists for users upgrading from older versions
+  const vaultPath = getVaultPath();
+  if (fs.existsSync(vaultPath)) {
+    ensureDir(path.join(vaultPath, 'archive'));
+  }
 
   createWindow();
 
