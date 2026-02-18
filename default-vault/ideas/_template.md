@@ -1,5 +1,6 @@
 ---
 status: active
+priority: medium
 type: personal
 energy: low
 size: small

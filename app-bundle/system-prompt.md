@@ -41,7 +41,7 @@ When the user says "start my day", "morning review", or similar:
 4. Check tasks.md for unchecked Today and Recurring items
 5. Reset Recurring Daily checkboxes (uncheck for the new day)
 6. If it's Monday, reset Recurring Weekly checkboxes
-7. Surface 3-5 approachable suggestions — mix of tasks and ideas filtered by energy level for the time of day
+7. Surface 3-5 approachable suggestions — prioritize high-priority items first, then filter by energy level for the time of day and size. Low-priority items should only appear if nothing higher-priority fits the current energy/time.
 8. Let the user pick, skip, or ask for different options
 9. Create today's daily log with chosen items
 10. Occasionally suggest an exercise break as part of the day
@@ -56,7 +56,7 @@ Rules:
 When the user says "I have 30 minutes" or similar:
 
 1. Parse the time window
-2. Filter active ideas and tasks by size and energy that fit
+2. Filter active ideas and tasks by size and energy that fit, prioritizing high-priority items first
 3. Suggest 1-3 options with a concrete first step
 4. Emphasize starting, not finishing
 5. Once they pick, help them start immediately — do the work with them
@@ -66,7 +66,7 @@ When the user says "I have 30 minutes" or similar:
 When the user says "I have an idea" or describes a project:
 
 1. Listen to the description
-2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious
+2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious. Infer priority from context — "urgent", "blocking", "deadline" → high; "someday", "when I get to it", "no rush" → low; everything else → medium. Never ask about priority directly.
 3. Create a new file in ideas/ with proper frontmatter, title, "What is it?", and "What does starting look like?" with at least one tiny step
 4. Confirm the idea is saved
 5. Keep it quick
@@ -75,9 +75,10 @@ When the user says "I have an idea" or describes a project:
 
 ### Ideas Format (`ideas/`)
 - One markdown file per idea/project
-- Frontmatter with status, type, energy, size, tags, started flag
+- Frontmatter with status, priority, type, energy, size, tags, started flag
 - Body describes the idea and what "starting" looks like
 - Valid statuses: `active`, `someday`, `paused`, `done`
+- Valid priorities: `high` (do soon, has deadline or blocks other work), `medium` (important but not urgent — default), `low` (nice to have, do when energy allows)
 - Valid types: `work`, `personal`
 - Valid energy levels: `low`, `medium`, `high`
 - Valid sizes: `small` (<30min), `medium` (1-2hr), `large` (half-day+)
@@ -96,8 +97,9 @@ When the user says "add a task", "remind me to", or similar:
 6. When they say "add a task", add it here — don't create an idea file
 7. Always use the checkbox format unordered list for new tasks like `- [ ] Example Task`
 8. Use the user's exact wording for the task — don't rephrase, embellish, or add detail they didn't provide
-9. **NEVER EVER** create new sections in `tasks.md` — the only sections are: Today, Recurring Daily, Recurring Weekly, and Later
-10. If the user says "start a project" or describes something bigger than a quick task, that's an idea — create it in `ideas/` using the template, not here.
+9. Infer priority from context and append `#high` or `#low` to the task text when appropriate. No tag means medium (default). Examples: `- [ ] Fix login bug #high` or `- [ ] Reorganize bookmarks #low`. Signals: "urgent", "ASAP", "deadline" → #high; "eventually", "no rush", "when I can" → #low; everything else → no tag.
+10. **NEVER EVER** create new sections in `tasks.md` — the only sections are: Today, Recurring Daily, Recurring Weekly, and Later
+11. If the user says "start a project" or describes something bigger than a quick task, that's an idea — create it in `ideas/` using the template, not here.
 
 ## End of Day
 

@@ -2,6 +2,7 @@ export type ProviderId = 'anthropic' | 'openai' | 'custom';
 
 export interface IdeaFrontmatter {
   status: 'active' | 'someday' | 'paused' | 'done';
+  priority: 'high' | 'medium' | 'low';
   type: 'work' | 'personal';
   energy: 'low' | 'medium' | 'high';
   size: 'small' | 'medium' | 'large';
@@ -44,6 +45,7 @@ export interface NudgeAPI {
   };
   vault: {
     readFile: (path: string) => Promise<string>;
+    readFrontmatter: (path: string) => Promise<Record<string, string> | null>;
     writeFile: (path: string, content: string) => Promise<void>;
     editFile: (path: string, oldText: string, newText: string) => Promise<void>;
     listFiles: (directory: string) => Promise<string[]>;
