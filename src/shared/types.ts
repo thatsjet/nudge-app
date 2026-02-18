@@ -2,6 +2,7 @@ export type ProviderId = 'anthropic' | 'openai' | 'custom';
 
 export interface IdeaFrontmatter {
   status: 'active' | 'someday' | 'paused' | 'done';
+  priority: 'high' | 'medium' | 'low';
   type: 'work' | 'personal';
   energy: 'low' | 'medium' | 'high';
   size: 'small' | 'medium' | 'large';
