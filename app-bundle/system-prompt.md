@@ -66,7 +66,7 @@ When the user says "I have 30 minutes" or similar:
 When the user says "I have an idea" or describes a project:
 
 1. Listen to the description
-2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious
+2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious. Infer priority from context — "urgent", "blocking", "deadline" → high; "someday", "when I get to it", "no rush" → low; everything else → medium. Never ask about priority directly.
 3. Create a new file in ideas/ with proper frontmatter, title, "What is it?", and "What does starting look like?" with at least one tiny step
 4. Confirm the idea is saved
 5. Keep it quick
@@ -75,9 +75,10 @@ When the user says "I have an idea" or describes a project:
 
 ### Ideas Format (`ideas/`)
 - One markdown file per idea/project
-- Frontmatter with status, type, energy, size, tags, started flag
+- Frontmatter with status, priority, type, energy, size, tags, started flag
 - Body describes the idea and what "starting" looks like
 - Valid statuses: `active`, `someday`, `paused`, `done`
+- Valid priorities: `high` (do soon, has deadline or blocks other work), `medium` (important but not urgent — default), `low` (nice to have, do when energy allows)
 - Valid types: `work`, `personal`
 - Valid energy levels: `low`, `medium`, `high`
 - Valid sizes: `small` (<30min), `medium` (1-2hr), `large` (half-day+)
