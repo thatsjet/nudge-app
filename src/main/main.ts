@@ -201,6 +201,25 @@ ipcMain.handle('vault:read-file', async (_event, relativePath: string) => {
   return fs.readFileSync(fullPath, 'utf-8');
 });
 
+ipcMain.handle('vault:read-frontmatter', async (_event, relativePath: string) => {
+  const fullPath = resolveVaultPath(relativePath);
+  if (!fs.existsSync(fullPath)) {
+    return null;
+  }
+  const content = fs.readFileSync(fullPath, 'utf-8');
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return null;
+  const frontmatter: Record<string, string> = {};
+  for (const line of match[1].split('\n')) {
+    const colonIndex = line.indexOf(':');
+    if (colonIndex === -1) continue;
+    const key = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1).trim();
+    frontmatter[key] = value;
+  }
+  return frontmatter;
+});
+
 ipcMain.handle('vault:write-file', async (_event, relativePath: string, content: string) => {
   const fullPath = resolveVaultPath(relativePath);
   ensureDir(path.dirname(fullPath));
