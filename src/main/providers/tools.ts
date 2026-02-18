@@ -60,4 +60,27 @@ export const VAULT_TOOLS: NeutralToolDef[] = [
       required: ['path', 'content'],
     },
   },
+  {
+    name: 'move_file',
+    description: 'Move a file from one location to another within the vault. Use this to archive completed idea files by moving them from ideas/ to archive/.',
+    parameters: {
+      type: 'object',
+      properties: {
+        source: { type: 'string', description: 'Source file path relative to vault root (e.g., "ideas/my-idea.md")' },
+        destination: { type: 'string', description: 'Destination file path relative to vault root (e.g., "archive/my-idea.md")' },
+      },
+      required: ['source', 'destination'],
+    },
+  },
+  {
+    name: 'archive_tasks',
+    description: 'Archive completed tasks from the Today section of tasks.md. Moves all "- [x]" tasks from the Today section to archive/archived_tasks.md with a date header, and removes them from tasks.md. Recurring sections (Recurring Daily, Recurring Weekly) are left untouched. Call this when the user asks to clean up completed tasks or during end-of-day.',
+    parameters: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'The date to use for the archive header in YYYY-MM-DD format (e.g., "2026-02-17")' },
+      },
+      required: ['date'],
+    },
+  },
 ];

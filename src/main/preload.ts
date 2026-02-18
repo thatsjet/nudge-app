@@ -131,6 +131,7 @@ contextBridge.exposeInMainWorld('nudge', {
     editFile: (path: string, oldText: string, newText: string) => invoke('vault:edit-file', path, oldText, newText),
     listFiles: (directory: string) => invoke('vault:list-files', directory),
     createFile: (path: string, content: string) => invoke('vault:create-file', path, content),
+    moveFile: (source: string, destination: string) => invoke('vault:move-file', source, destination),
     getPath: () => invoke('vault:get-path'),
     initialize: (path: string) => invoke('vault:initialize', path),
     exists: (path: string) => invoke('vault:exists', path),

@@ -33,7 +33,7 @@ export interface AppSettings {
 }
 
 export interface ToolUseRequest {
-  name: 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'create_file';
+  name: 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'create_file' | 'move_file' | 'archive_tasks';
   input: Record<string, string>;
 }
 
@@ -48,6 +48,7 @@ export interface NudgeAPI {
     editFile: (path: string, oldText: string, newText: string) => Promise<void>;
     listFiles: (directory: string) => Promise<string[]>;
     createFile: (path: string, content: string) => Promise<void>;
+    moveFile: (source: string, destination: string) => Promise<void>;
     getPath: () => Promise<string>;
     initialize: (path: string) => Promise<void>;
     exists: (path: string) => Promise<boolean>;

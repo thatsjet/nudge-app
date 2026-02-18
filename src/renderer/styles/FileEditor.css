@@ -59,7 +59,7 @@
   color: var(--accent-light);
 }
 
-/* Line number toggle button */
+/* Line number / wrap toggle buttons */
 .file-editor-line-toggle {
   display: flex;
   align-items: center;
@@ -89,12 +89,52 @@
   line-height: 1;
 }
 
+/* Formatting toolbar */
+.file-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.file-editor-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.file-editor-toolbar-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-editor-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-light);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
 /* Editor body */
 .file-editor-body {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
+  position: relative;
 }
 
 .file-editor-loading {
@@ -115,12 +155,7 @@
   overflow: hidden;
   user-select: none;
   position: relative;
-}
-
-/* Push the gutter content below the toolbar row and constrain height */
-.file-editor-body.show-line-numbers .file-editor-gutter {
-  margin-top: 35px;
-  height: calc(100% - 35px);
+  height: 100%;
 }
 
 .file-editor-line-numbers {
@@ -138,77 +173,34 @@
   opacity: 0.6;
 }
 
-/* MDEditor fills remaining space */
-.file-editor-body .w-md-editor {
+/* Editor textarea */
+.file-editor-textarea {
   flex: 1;
   min-width: 0;
-  height: 100% !important;
+  resize: none;
   border: none;
-  border-radius: 0;
-  box-shadow: none;
+  outline: none;
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-primary);
   background: var(--bg-chat);
-  color: var(--text-primary);
+  overflow: auto;
+  white-space: pre;
+  word-wrap: normal;
+  overflow-wrap: normal;
+  tab-size: 2;
 }
 
-.file-editor-body .w-md-editor-toolbar {
-  border-bottom: 1px solid var(--border-light);
-  background: var(--bg-secondary);
-  min-height: auto;
-  padding: 4px 8px;
-}
-
-.file-editor-body .w-md-editor-toolbar li > button {
-  color: var(--text-secondary);
-  height: 26px;
-  width: 26px;
-}
-
-.file-editor-body .w-md-editor-toolbar li > button:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.file-editor-body .w-md-editor-toolbar li.active > button {
-  color: var(--accent);
-}
-
-/* Editor content area */
-.file-editor-body .w-md-editor-content {
-  height: calc(100% - 35px) !important;
-}
-
-.file-editor-body .w-md-editor-area {
-  overflow: auto !important;
-}
-
-.file-editor-body .w-md-editor-text-pre,
-.file-editor-body .w-md-editor-text-input,
-.file-editor-body .w-md-editor-text-pre > code {
-  font-family: var(--font-mono) !important;
-  font-size: 13px !important;
-  line-height: 1.7 !important;
-  white-space: pre !important;
-  word-wrap: normal !important;
-  overflow-wrap: normal !important;
+.file-editor-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 /* Word wrap mode */
-.file-editor-body.word-wrap .w-md-editor-text-pre,
-.file-editor-body.word-wrap .w-md-editor-text-input,
-.file-editor-body.word-wrap .w-md-editor-text-pre > code {
-  white-space: pre-wrap !important;
-  word-wrap: break-word !important;
-  overflow-wrap: break-word !important;
-}
-
-.file-editor-body .w-md-editor-text-input {
-  -webkit-text-fill-color: inherit !important;
-}
-
-/* Preview pane styling */
-.file-editor-body .w-md-editor-preview .wmde-markdown {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  background: var(--bg-chat);
-  color: var(--text-primary);
+.file-editor-body.word-wrap .file-editor-textarea {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
