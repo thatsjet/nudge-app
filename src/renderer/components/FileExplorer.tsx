@@ -48,11 +48,17 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect }: FileExpl
     const ideaEntries = entries.find(e => e.name === 'ideas' && e.isDirectory);
     if (!ideaEntries) return;
     const ideaFiles = await window.nudge.vault.listFiles('ideas');
+    const filtered = ideaFiles.filter((f: any) => !f.isDirectory && f.name.endsWith('.md') && f.name !== '_template.md');
+    const results = await Promise.all(
+      filtered.map(async (file: any) => {
+        const frontmatter = await window.nudge.vault.readFrontmatter(file.path);
+        return { path: file.path, priority: frontmatter?.priority };
+      })
+    );
     const newPriorities: Record<string, string> = {};
-    for (const file of ideaFiles.filter((f: any) => !f.isDirectory && f.name.endsWith('.md') && f.name !== '_template.md')) {
-      const frontmatter = await window.nudge.vault.readFrontmatter(file.path);
-      if (frontmatter?.priority && frontmatter.priority !== 'medium') {
-        newPriorities[file.path] = frontmatter.priority;
+    for (const r of results) {
+      if (r.priority && r.priority !== 'medium') {
+        newPriorities[r.path] = r.priority;
       }
     }
     setPriorities(newPriorities);
@@ -63,7 +69,7 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect }: FileExpl
     const root = await loadDirectory('');
     setEntries(root);
     setLoading(false);
-    loadPriorities(root);
+    loadPriorities(root).catch(() => {});
   }, [loadDirectory, loadPriorities]);
 
   useEffect(() => {
