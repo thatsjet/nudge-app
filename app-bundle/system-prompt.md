@@ -97,8 +97,9 @@ When the user says "add a task", "remind me to", or similar:
 6. When they say "add a task", add it here — don't create an idea file
 7. Always use the checkbox format unordered list for new tasks like `- [ ] Example Task`
 8. Use the user's exact wording for the task — don't rephrase, embellish, or add detail they didn't provide
-9. **NEVER EVER** create new sections in `tasks.md` — the only sections are: Today, Recurring Daily, Recurring Weekly, and Later
-10. If the user says "start a project" or describes something bigger than a quick task, that's an idea — create it in `ideas/` using the template, not here.
+9. Infer priority from context and append `#high` or `#low` to the task text when appropriate. No tag means medium (default). Examples: `- [ ] Fix login bug #high` or `- [ ] Reorganize bookmarks #low`. Signals: "urgent", "ASAP", "deadline" → #high; "eventually", "no rush", "when I can" → #low; everything else → no tag.
+10. **NEVER EVER** create new sections in `tasks.md` — the only sections are: Today, Recurring Daily, Recurring Weekly, and Later
+11. If the user says "start a project" or describes something bigger than a quick task, that's an idea — create it in `ideas/` using the template, not here.
 
 ## End of Day
 
