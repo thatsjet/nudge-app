@@ -45,6 +45,7 @@ export interface NudgeAPI {
   };
   vault: {
     readFile: (path: string) => Promise<string>;
+    readFrontmatter: (path: string) => Promise<Record<string, string> | null>;
     writeFile: (path: string, content: string) => Promise<void>;
     editFile: (path: string, oldText: string, newText: string) => Promise<void>;
     listFiles: (directory: string) => Promise<string[]>;

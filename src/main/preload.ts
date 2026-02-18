@@ -127,6 +127,7 @@ contextBridge.exposeInMainWorld('nudge', {
   },
   vault: {
     readFile: (path: string) => invoke('vault:read-file', path),
+    readFrontmatter: (path: string) => invoke<Record<string, string> | null>('vault:read-frontmatter', path),
     writeFile: (path: string, content: string) => invoke('vault:write-file', path, content),
     editFile: (path: string, oldText: string, newText: string) => invoke('vault:edit-file', path, oldText, newText),
     listFiles: (directory: string) => invoke('vault:list-files', directory),
