@@ -18,6 +18,7 @@ export default function App() {
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [theme, setTheme] = useState<string>('system');
+  const [hasUpdate, setHasUpdate] = useState(false);
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const streamingContentRef = useRef('');
 
@@ -44,6 +45,29 @@ export default function App() {
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
+
+  // Subscribe to update status changes
+  useEffect(() => {
+    // Check initial status
+    window.nudge.updater.getStatus().then((status) => {
+      setHasUpdate(status.state === 'available' || status.state === 'downloaded');
+    });
+
+    // Listen for changes
+    const cleanup = window.nudge.updater.onStatusChange((status) => {
+      setHasUpdate(status.state === 'available' || status.state === 'downloaded');
+    });
+
+    return cleanup;
+  }, []);
+
+  // Listen for "Check for Updates..." menu item
+  useEffect(() => {
+    const cleanup = window.nudge.app.onCheckForUpdates(() => {
+      setSettingsOpen(true);
+    });
+    return cleanup;
+  }, []);
 
   function applyTheme(t: string) {
     if (t === 'system') {
@@ -231,6 +255,7 @@ export default function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onNewChat={handleNewChat}
         explorerOpen={explorerOpen}
+        hasUpdate={hasUpdate}
       />
 
       <div className="app-body">
