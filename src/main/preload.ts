@@ -119,10 +119,16 @@ async function invoke<T>(channel: string, ...args: any[]): Promise<T> {
 contextBridge.exposeInMainWorld('nudge', {
   app: {
     getSystemPrompt: () => invoke<string>('app:get-system-prompt'),
+    getVersion: () => invoke<string>('app:get-version'),
     onMenuSave: (callback: () => void) => {
       const handler = () => callback();
       ipcRenderer.on('menu:save', handler);
       return () => { ipcRenderer.removeListener('menu:save', handler); };
+    },
+    onCheckForUpdates: (callback: () => void) => {
+      const handler = () => callback();
+      ipcRenderer.on('menu:check-for-updates', handler);
+      return () => { ipcRenderer.removeListener('menu:check-for-updates', handler); };
     },
   },
   vault: {
@@ -212,5 +218,16 @@ contextBridge.exposeInMainWorld('nudge', {
     get: (id: string) => invoke('sessions:get', id),
     create: () => invoke('sessions:create'),
     addMessage: (sessionId: string, message: any) => invoke('sessions:add-message', sessionId, message),
+  },
+  updater: {
+    checkForUpdates: () => invoke<void>('updater:check'),
+    downloadUpdate: () => invoke<void>('updater:download'),
+    installUpdate: () => invoke<void>('updater:install'),
+    getStatus: () => invoke<any>('updater:get-status'),
+    onStatusChange: (callback: (status: any) => void) => {
+      const handler = (_event: any, status: any) => callback(status);
+      ipcRenderer.on('updater:status-changed', handler);
+      return () => { ipcRenderer.removeListener('updater:status-changed', handler); };
+    },
   },
 });
