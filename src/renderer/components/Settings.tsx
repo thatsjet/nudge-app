@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import '../styles/Settings.css';
-import type { ProviderId } from '../../shared/types';
+import type { ProviderId, UpdateStatus } from '../../shared/types';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -80,6 +80,9 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [validating, setValidating] = useState(false);
   const [theme, setTheme] = useState<Theme>('system');
   const [vaultPath, setVaultPath] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
+  const [autoCheckUpdates, setAutoCheckUpdates] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -105,6 +108,15 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
         const path = await window.nudge.vault.getPath();
         if (path) setVaultPath(path);
+
+        const version = await window.nudge.app.getVersion();
+        setAppVersion(version);
+
+        const autoCheck = await window.nudge.settings.get('autoCheckUpdates');
+        setAutoCheckUpdates(autoCheck !== false);
+
+        const status = await window.nudge.updater.getStatus();
+        setUpdateStatus(status);
       } catch {
         // Settings may not be initialized yet
       }
@@ -114,6 +126,32 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     setKeyFeedback(null);
     setShowKey(false);
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const cleanup = window.nudge.updater.onStatusChange((status: UpdateStatus) => {
+      setUpdateStatus(status);
+    });
+
+    return cleanup;
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (updateStatus.state !== 'not-available') return;
+
+    const timer = setTimeout(() => {
+      setUpdateStatus({ state: 'idle' });
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [updateStatus.state]);
+
+  const handleAutoCheckToggle = async () => {
+    const newValue = !autoCheckUpdates;
+    setAutoCheckUpdates(newValue);
+    await window.nudge.settings.set('autoCheckUpdates', newValue);
+  };
 
   const handleProviderChange = async (pid: ProviderId) => {
     setActiveProvider(pid);
@@ -343,9 +381,84 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
           <div className="settings-section">
             <label className="settings-label">About</label>
             <div className="settings-about">
-              Nudge v0.1.0<br />
+              Nudge v{appVersion || '...'}<br />
               Open source under MIT license.
             </div>
+
+            <div className="settings-toggle-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={autoCheckUpdates}
+                  onChange={handleAutoCheckToggle}
+                />
+                Check for updates on startup
+              </label>
+            </div>
+
+            {updateStatus.state === 'checking' && (
+              <div className="settings-update-banner">
+                Checking for updates...
+              </div>
+            )}
+
+            {updateStatus.state === 'available' && (
+              <div className="settings-update-banner">
+                <span>Version {updateStatus.info.version} is available</span>
+                <button
+                  className="settings-btn settings-btn--primary settings-btn--small"
+                  onClick={() => window.nudge.updater.downloadUpdate()}
+                >
+                  Download &amp; Update
+                </button>
+              </div>
+            )}
+
+            {updateStatus.state === 'downloading' && (
+              <div className="settings-update-banner">
+                <span>Downloading... {Math.round(updateStatus.progress.percent)}%</span>
+                <div className="settings-progress-bar">
+                  <div
+                    className="settings-progress-fill"
+                    style={{ width: `${updateStatus.progress.percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {updateStatus.state === 'downloaded' && (
+              <div className="settings-update-banner">
+                <span>Version {updateStatus.info.version} is ready</span>
+                <button
+                  className="settings-btn settings-btn--primary settings-btn--small"
+                  onClick={() => window.nudge.updater.installUpdate()}
+                >
+                  Restart to Update
+                </button>
+              </div>
+            )}
+
+            {updateStatus.state === 'not-available' && (
+              <div className="settings-update-banner">
+                You're on the latest version.
+              </div>
+            )}
+
+            {updateStatus.state === 'error' && (
+              <div className="settings-update-banner settings-update-banner--error">
+                Update error: {updateStatus.message}
+              </div>
+            )}
+
+            {updateStatus.state === 'idle' && (
+              <button
+                className="settings-btn settings-btn--secondary settings-btn--small"
+                onClick={() => window.nudge.updater.checkForUpdates()}
+                style={{ marginTop: 8 }}
+              >
+                Check for Updates
+              </button>
+            )}
           </div>
         </div>
       </div>
