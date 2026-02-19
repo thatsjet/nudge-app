@@ -70,3 +70,25 @@ export interface LLMProvider {
   // Return default models for this provider
   getDefaultModels(): ModelOption[];
 }
+
+// Auto-updater types (duplicated from shared/types.ts)
+export interface UpdateInfo {
+  version: string;
+  releaseDate?: string;
+}
+
+export interface UpdateProgress {
+  percent: number;
+  bytesPerSecond: number;
+  total: number;
+  transferred: number;
+}
+
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'available'; info: UpdateInfo }
+  | { state: 'not-available' }
+  | { state: 'downloading'; progress: UpdateProgress }
+  | { state: 'downloaded'; info: UpdateInfo }
+  | { state: 'error'; message: string };
