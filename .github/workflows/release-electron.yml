@@ -242,6 +242,50 @@ jobs:
           echo "=== Combined checksums ==="
           cat SHA256SUMS.txt
 
+      - name: Generate electron-updater metadata
+        run: |
+          cd artifacts
+          VERSION="${{ github.event.inputs.tag || github.ref_name }}"
+          VERSION="${VERSION#v}"
+
+          generate_metadata() {
+            local file="$1"
+            local output="$2"
+            if [ ! -f "$file" ]; then return; fi
+            local sha512=$(shasum -a 512 "$file" | awk '{print $1}' | xxd -r -p | base64)
+            local size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
+            local filename=$(basename "$file")
+            cat > "$output" <<EOF
+          version: ${VERSION}
+          files:
+            - url: ${filename}
+              sha512: ${sha512}
+              size: ${size}
+          path: ${filename}
+          sha512: ${sha512}
+          releaseDate: $(date -u +%Y-%m-%dT%H:%M:%S.000Z)
+          EOF
+            echo "Generated $output for $filename"
+          }
+
+          # macOS
+          DMG=$(ls *.dmg 2>/dev/null | head -1)
+          if [ -n "$DMG" ]; then
+            generate_metadata "$DMG" "latest-mac.yml"
+          fi
+
+          # Windows
+          EXE=$(ls *.exe 2>/dev/null | head -1)
+          if [ -n "$EXE" ]; then
+            generate_metadata "$EXE" "latest.yml"
+          fi
+
+          # Linux
+          APPIMAGE=$(ls *.AppImage 2>/dev/null | head -1)
+          if [ -n "$APPIMAGE" ]; then
+            generate_metadata "$APPIMAGE" "latest-linux.yml"
+          fi
+
       - name: Determine if draft
         id: draft
         run: |
@@ -266,5 +310,8 @@ jobs:
             artifacts/*.snap
             artifacts/*.tar.gz
             artifacts/SHA256SUMS.txt
+            artifacts/latest.yml
+            artifacts/latest-mac.yml
+            artifacts/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
