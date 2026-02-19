@@ -3,10 +3,66 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { getProvider, resetProvider } from './providers/registry';
 import { VAULT_TOOLS } from './providers/tools';
-import { ProviderId } from './providers/types';
+import { ProviderId, UpdateStatus } from './providers/types';
+import { autoUpdater } from 'electron-updater';
 
 let mainWindow: BrowserWindow | null = null;
 const IS_DEV = process.argv.includes('--dev');
+
+let updateStatus: UpdateStatus = { state: 'idle' };
+
+function setUpdateStatus(status: UpdateStatus): void {
+  updateStatus = status;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updater:status-changed', status);
+  }
+}
+
+function setupAutoUpdater(): void {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on('checking-for-update', () => {
+    setUpdateStatus({ state: 'checking' });
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    setUpdateStatus({
+      state: 'available',
+      info: { version: info.version, releaseDate: info.releaseDate },
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    setUpdateStatus({ state: 'not-available' });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    setUpdateStatus({
+      state: 'downloading',
+      progress: {
+        percent: progress.percent,
+        bytesPerSecond: progress.bytesPerSecond,
+        total: progress.total,
+        transferred: progress.transferred,
+      },
+    });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    setUpdateStatus({
+      state: 'downloaded',
+      info: { version: info.version, releaseDate: info.releaseDate },
+    });
+  });
+
+  autoUpdater.on('error', (error) => {
+    setUpdateStatus({ state: 'error', message: error?.message || 'Update check failed' });
+  });
+}
+
 const DEV_LOG_DIR = 'logs';
 const DEV_LOG_FILE = 'dev.log';
 
@@ -285,6 +341,29 @@ ipcMain.handle('app:get-system-prompt', async () => {
     'system-prompt.md'
   );
   return fs.readFileSync(bundledPath, 'utf-8');
+});
+
+ipcMain.handle('app:get-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('updater:check', async () => {
+  if (!app.isPackaged) return;
+  await autoUpdater.checkForUpdates();
+});
+
+ipcMain.handle('updater:download', async () => {
+  if (!app.isPackaged) return;
+  await autoUpdater.downloadUpdate();
+});
+
+ipcMain.handle('updater:install', () => {
+  if (!app.isPackaged) return;
+  autoUpdater.quitAndInstall();
+});
+
+ipcMain.handle('updater:get-status', () => {
+  return updateStatus;
 });
 
 ipcMain.handle('vault:initialize', async (_event, vaultPath: string) => {
@@ -740,6 +819,7 @@ app.whenReady().then(async () => {
   devLog('lifecycle', 'app ready');
   devLog('lifecycle', 'dev log file', { path: path.join(app.getPath('userData'), DEV_LOG_DIR, DEV_LOG_FILE) });
   await migrateApiKey();
+  setupAutoUpdater();
 
   // Set up application menu so standard shortcuts (Cmd+Q, Cmd+C, etc.) work
   const template: Electron.MenuItemConstructorOptions[] = [
@@ -764,6 +844,17 @@ app.whenReady().then(async () => {
           click: () => {
             if (mainWindow && !mainWindow.isDestroyed()) {
               mainWindow.webContents.send('menu:save');
+            }
+          },
+        },
+        {
+          label: 'Check for Updates...',
+          click: () => {
+            if (mainWindow && !mainWindow.isDestroyed()) {
+              mainWindow.webContents.send('menu:check-for-updates');
+            }
+            if (app.isPackaged) {
+              autoUpdater.checkForUpdates().catch(() => {});
             }
           },
         },
@@ -816,6 +907,16 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+
+  // Auto-check for updates on startup (packaged builds only)
+  if (app.isPackaged) {
+    const settings = loadSettings();
+    if (settings.autoCheckUpdates !== false) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch(() => {});
+      }, 3000);
+    }
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
