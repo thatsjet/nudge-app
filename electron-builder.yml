@@ -20,3 +20,7 @@ win:
   icon: icon.png
 linux:
   target: AppImage
+publish:
+  provider: github
+  owner: thatsjet
+  repo: nudge-app
