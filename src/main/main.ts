@@ -348,7 +348,11 @@ ipcMain.handle('app:get-version', () => {
 });
 
 ipcMain.handle('updater:check', async () => {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged) {
+    setUpdateStatus({ state: 'checking' });
+    setTimeout(() => setUpdateStatus({ state: 'not-available' }), 1000);
+    return;
+  }
   await autoUpdater.checkForUpdates();
 });
 
