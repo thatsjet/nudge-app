@@ -18,6 +18,11 @@ mac:
 win:
   target: nsis
   icon: icon.png
+  azureSignOptions:
+    publisherName: "Jeremy Anderson"
+    endpoint: "https://eus.codesigning.azure.net/"
+    certificateProfileName: "nudge-public-trust"
+    codeSigningAccountName: "nudgesigning"
 linux:
   target: AppImage
 publish:
