@@ -20,7 +20,7 @@ win:
   icon: icon.png
   azureSignOptions:
     publisherName: "Jeremy Anderson"
-    endpoint: "https://eus.codesigning.azure.net/"
+    endpoint: "https://wus.codesigning.azure.net/"
     certificateProfileName: "nudge-public-trust"
     codeSigningAccountName: "nudgesigning"
 linux:
