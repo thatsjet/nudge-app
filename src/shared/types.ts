@@ -31,7 +31,29 @@ export interface AppSettings {
   model: string;
   activeProvider: ProviderId;
   onboardingComplete: boolean;
+  autoCheckUpdates: boolean;
 }
+
+export interface UpdateInfo {
+  version: string;
+  releaseDate?: string;
+}
+
+export interface UpdateProgress {
+  percent: number;
+  bytesPerSecond: number;
+  total: number;
+  transferred: number;
+}
+
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'available'; info: UpdateInfo }
+  | { state: 'not-available' }
+  | { state: 'downloading'; progress: UpdateProgress }
+  | { state: 'downloaded'; info: UpdateInfo }
+  | { state: 'error'; message: string };
 
 export interface ToolUseRequest {
   name: 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'create_file' | 'move_file' | 'archive_tasks';
@@ -41,7 +63,9 @@ export interface ToolUseRequest {
 export interface NudgeAPI {
   app: {
     getSystemPrompt: () => Promise<string>;
+    getVersion: () => Promise<string>;
     onMenuSave: (callback: () => void) => () => void;
+    onCheckForUpdates: (callback: () => void) => () => void;
   };
   vault: {
     readFile: (path: string) => Promise<string>;
@@ -74,6 +98,13 @@ export interface NudgeAPI {
     setApiKey: (provider: ProviderId, key: string) => Promise<void>;
     getProviderBaseUrl: (provider: ProviderId) => Promise<string | null>;
     setProviderBaseUrl: (provider: ProviderId, url: string) => Promise<void>;
+  };
+  updater: {
+    checkForUpdates: () => Promise<void>;
+    downloadUpdate: () => Promise<void>;
+    installUpdate: () => Promise<void>;
+    getStatus: () => Promise<UpdateStatus>;
+    onStatusChange: (callback: (status: UpdateStatus) => void) => () => void;
   };
   sessions: {
     list: () => Promise<Session[]>;

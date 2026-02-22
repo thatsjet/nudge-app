@@ -45,3 +45,17 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
+
+.header-btn--settings {
+  position: relative;
+}
+
+.header-update-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}

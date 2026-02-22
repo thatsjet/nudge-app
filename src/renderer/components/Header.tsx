@@ -6,9 +6,10 @@ interface HeaderProps {
   onOpenSettings: () => void;
   onNewChat: () => void;
   explorerOpen: boolean;
+  hasUpdate?: boolean;
 }
 
-export default function Header({ onToggleExplorer, onOpenSettings, onNewChat, explorerOpen }: HeaderProps) {
+export default function Header({ onToggleExplorer, onOpenSettings, onNewChat, explorerOpen, hasUpdate }: HeaderProps) {
   return (
     <div className="header drag-region">
       <div className="header-left" />
@@ -26,8 +27,9 @@ export default function Header({ onToggleExplorer, onOpenSettings, onNewChat, ex
         <button className="header-btn" onClick={onNewChat} title="New chat">
           +
         </button>
-        <button className="header-btn" onClick={onOpenSettings} title="Settings">
+        <button className="header-btn header-btn--settings" onClick={onOpenSettings} title="Settings">
           <span role="img" aria-label="Settings">&#9881;&#65039;</span>
+          {hasUpdate && <span className="header-update-dot" />}
         </button>
       </div>
     </div>
