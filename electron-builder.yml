@@ -12,7 +12,7 @@ icon: icon.png
 mac:
   target:
     - dmg
-    - dir
+    - zip
   category: public.app-category.productivity
   icon: icon.png
 win:
