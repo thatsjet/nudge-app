@@ -10,7 +10,9 @@
     "dev:electron": "wait-on http://localhost:5173 && tsc -p tsconfig.electron.json && electron . --dev",
     "build": "tsc -p tsconfig.electron.json && vite build --config vite.config.ts && electron-builder",
     "build:vite": "vite build --config vite.config.ts",
-    "build:electron": "tsc -p tsconfig.electron.json"
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "author": "",
   "license": "MIT",
@@ -26,6 +28,9 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
@@ -34,8 +39,10 @@
     "concurrently": "^9.2.1",
     "electron": "^40.2.1",
     "electron-builder": "^26.7.0",
+    "jsdom": "^28.1.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
+    "vitest": "^4.0.18",
     "wait-on": "^9.0.3"
   }
 }
