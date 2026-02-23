@@ -269,10 +269,10 @@ jobs:
             echo "Generated $output for $filename"
           }
 
-          # macOS
-          DMG=$(ls *.dmg 2>/dev/null | head -1)
-          if [ -n "$DMG" ]; then
-            generate_metadata "$DMG" "latest-mac.yml"
+          # macOS (auto-updater requires zip, not dmg)
+          ZIP=$(ls *.zip 2>/dev/null | head -1)
+          if [ -n "$ZIP" ]; then
+            generate_metadata "$ZIP" "latest-mac.yml"
           fi
 
           # Windows
