@@ -253,7 +253,7 @@ jobs:
             local file="$1"
             local output="$2"
             if [ ! -f "$file" ]; then return; fi
-            local sha512=$(shasum -a 512 "$file" | awk '{print $1}' | xxd -r -p | base64)
+            local sha512=$(shasum -a 512 "$file" | awk '{print $1}' | xxd -r -p | base64 -w 0)
             local size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null)
             local filename=$(basename "$file")
             cat > "$output" <<EOF
