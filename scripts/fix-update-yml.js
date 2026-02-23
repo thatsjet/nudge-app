@@ -7,8 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 
-module.exports = async function (context) {
-  const outputDir = context.outDir;
+module.exports = async function (buildResult) {
+  const outputDir = buildResult.outDir;
   const ymlFiles = fs.readdirSync(outputDir).filter(f => f.match(/^latest.*\.yml$/));
 
   for (const file of ymlFiles) {
@@ -16,13 +16,11 @@ module.exports = async function (context) {
     let content = fs.readFileSync(filePath, 'utf8');
 
     // Fix sha512 values that are split across lines.
-    // Match "sha512: <base64>" where the base64 continues on the next line
-    // (next line starts with non-space content that looks like base64 continuation)
+    // electron-builder wraps base64 at 76 chars, with the continuation
+    // on the next line with no indentation — join them back together.
     content = content.replace(
-      /^(\s+sha512:\s+)(\S+)\n(\s+)(\S+==)$/gm,
-      (match, prefix, part1, indent, part2) => {
-        return `${prefix}${part1}${part2}`;
-      }
+      /(sha512:\s+\S+)\n(\S+==)/g,
+      '$1$2'
     );
 
     fs.writeFileSync(filePath, content, 'utf8');
