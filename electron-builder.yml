@@ -25,6 +25,7 @@ win:
     codeSigningAccountName: "nudgesigning"
 linux:
   target: AppImage
+afterAllArtifactBuild: scripts/fix-update-yml.js
 publish:
   provider: github
   owner: thatsjet
