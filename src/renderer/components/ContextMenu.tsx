@@ -6,7 +6,6 @@ export interface ContextMenuItem {
   onClick: () => void;
   danger?: boolean;
   disabled?: boolean;
-  submenu?: ContextMenuItem[];
 }
 
 export interface ContextMenuSeparator {

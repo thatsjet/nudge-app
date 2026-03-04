@@ -140,7 +140,6 @@ contextBridge.exposeInMainWorld('nudge', {
     createFile: (path: string, content: string) => invoke('vault:create-file', path, content),
     moveFile: (source: string, destination: string) => invoke('vault:move-file', source, destination),
     deleteFile: (path: string) => invoke<void>('vault:delete-file', path),
-    listDirectories: () => invoke<string[]>('vault:list-directories'),
     onChanged: (callback: () => void) => {
       const handler = () => callback();
       ipcRenderer.on('vault:changed', handler);

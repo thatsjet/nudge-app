@@ -33,6 +33,10 @@ jobs:
         include:
           - os: macos-latest
             platform: mac
+            arch: arm64
+          - os: macos-13
+            platform: mac
+            arch: x64
           - os: ubuntu-latest
             platform: linux
           - os: windows-latest
@@ -62,7 +66,7 @@ jobs:
       # --- macOS signing & notarization ---
       - name: Build Electron app (macOS)
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac --publish never
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish never
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -212,7 +216,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.platform }}
+          name: release-${{ matrix.platform }}${{ matrix.arch && format('-{0}', matrix.arch) || '' }}
           path: |
             release/*.dmg
             release/*.zip
@@ -270,9 +274,17 @@ jobs:
           }
 
           # macOS (auto-updater requires zip, not dmg)
-          ZIP=$(ls *.zip 2>/dev/null | head -1)
-          if [ -n "$ZIP" ]; then
-            generate_metadata "$ZIP" "latest-mac.yml"
+          ZIP_ARM=$(ls *-arm64*.zip 2>/dev/null | head -1)
+          if [ -n "$ZIP_ARM" ]; then
+            generate_metadata "$ZIP_ARM" "latest-mac.yml"
+          fi
+
+          ZIP_X64=$(ls *-x64*.zip 2>/dev/null | head -1)
+          if [ -z "$ZIP_X64" ]; then
+            ZIP_X64=$(ls *.zip 2>/dev/null | grep -v arm64 | head -1)
+          fi
+          if [ -n "$ZIP_X64" ]; then
+            generate_metadata "$ZIP_X64" "latest-mac-x64.yml"
           fi
 
           # Windows
@@ -313,6 +325,7 @@ jobs:
             artifacts/SHA256SUMS.txt
             artifacts/latest.yml
             artifacts/latest-mac.yml
+            artifacts/latest-mac-x64.yml
             artifacts/latest-linux.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

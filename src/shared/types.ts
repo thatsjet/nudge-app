@@ -77,7 +77,6 @@ export interface NudgeAPI {
     createFile: (path: string, content: string) => Promise<void>;
     moveFile: (source: string, destination: string) => Promise<void>;
     deleteFile: (path: string) => Promise<void>;
-    listDirectories: () => Promise<string[]>;
     onChanged: (callback: () => void) => () => void;
     getPath: () => Promise<string>;
     initialize: (path: string) => Promise<void>;
