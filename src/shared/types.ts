@@ -32,6 +32,7 @@ export interface AppSettings {
   activeProvider: ProviderId;
   onboardingComplete: boolean;
   autoCheckUpdates: boolean;
+  editorLineWrap: boolean;
 }
 
 export interface UpdateInfo {
@@ -75,6 +76,9 @@ export interface NudgeAPI {
     listFiles: (directory: string) => Promise<string[]>;
     createFile: (path: string, content: string) => Promise<void>;
     moveFile: (source: string, destination: string) => Promise<void>;
+    deleteFile: (path: string) => Promise<void>;
+    listDirectories: () => Promise<string[]>;
+    onChanged: (callback: () => void) => () => void;
     getPath: () => Promise<string>;
     initialize: (path: string) => Promise<void>;
     exists: (path: string) => Promise<boolean>;

@@ -127,7 +127,7 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   const [loading, setLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
-  const [wordWrap, setWordWrap] = useState(false);
+  const [wordWrap, setWordWrap] = useState(true);
   const [scrollTop, setScrollTop] = useState(0);
   const [lineHeights, setLineHeights] = useState<number[] | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,6 +137,22 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const isDark = useIsDark();
+
+  // Load persisted line wrap setting
+  useEffect(() => {
+    window.nudge.settings.get('editorLineWrap').then((val: any) => {
+      // Default to true if not yet set
+      setWordWrap(val !== false);
+    });
+  }, []);
+
+  const handleWordWrapToggle = useCallback(() => {
+    setWordWrap(prev => {
+      const next = !prev;
+      window.nudge.settings.set('editorLineWrap', next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!filePath) return;
@@ -351,7 +367,7 @@ export default function FileEditor({ filePath, onClose }: FileEditorProps) {
         </button>
         <button
           className={`file-editor-line-toggle ${wordWrap ? 'active' : ''}`}
-          onClick={() => setWordWrap(prev => !prev)}
+          onClick={handleWordWrapToggle}
           title={wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

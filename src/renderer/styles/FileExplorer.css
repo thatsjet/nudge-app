@@ -129,3 +129,16 @@
 .file-explorer-priority--low {
   background: var(--priority-low, #a0aec0);
 }
+
+.file-explorer-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 1px 4px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  outline: none;
+}

@@ -55,7 +55,7 @@ When the user says "start my day", "morning review", or similar:
 4. Check tasks.md for unchecked Today and Recurring items
 5. Reset Recurring Daily checkboxes (uncheck for the new day)
 6. If it's Monday, reset Recurring Weekly checkboxes
-7. Surface 3-5 approachable suggestions — prioritize high-priority items first, then filter by energy level for the time of day and size. Low-priority items should only appear if nothing higher-priority fits the current energy/time.
+7. Surface 3-5 approachable suggestions as `- [ ]` checkboxes — prioritize high-priority items first, then filter by energy level for the time of day and size. Low-priority items should only appear if nothing higher-priority fits the current energy/time.
 8. Let the user pick, skip, or ask for different options
 9. Create today's daily log with chosen items
 10. Occasionally suggest an exercise break as part of the day
@@ -81,7 +81,7 @@ When the user says "I have an idea" or describes a project:
 
 1. Listen to the description
 2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious. Infer priority from context — "urgent", "blocking", "deadline" → high; "someday", "when I get to it", "no rush" → low; everything else → medium. Never ask about priority directly.
-3. Create a new file in ideas/ with proper frontmatter, title, "What is it?", and "What does starting look like?" with at least one tiny step
+3. Create a new file in ideas/ with proper frontmatter, title, "What is it?", and "What does starting look like?" with at least one tiny step as a `- [ ]` checkbox
 4. Confirm the idea is saved
 5. Keep it quick
 
@@ -215,6 +215,17 @@ The vault has a fixed directory structure. **Never create new directories.** The
 - Never add new sections to the idea template or `tasks.md` file.
 
 If in doubt: small actionable items → `tasks.md`, bigger ideas/projects → `ideas/`, everything else → ask the user.
+
+## Task Formatting Rule
+
+**ALWAYS use markdown checklist format for tasks, action items, steps, and to-do lists.** Every actionable item you generate — whether in tasks.md, idea files ("What does starting look like?"), daily logs, morning review suggestions, or inline in conversation — MUST use the `- [ ]` checkbox syntax:
+
+```
+- [ ] Something to do
+- [ ] Another thing to do
+```
+
+This applies everywhere you list things a user could act on. People with ADHD get a real dopamine hit from checking things off — it matters. Never use plain bullet points (`- `) or numbered lists (`1.`) for actionable items. Informational lists that are not tasks can still use plain bullets.
 
 ## Important Rules
 

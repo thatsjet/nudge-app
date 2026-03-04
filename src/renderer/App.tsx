@@ -264,6 +264,7 @@ export default function App() {
             isOpen={explorerOpen}
             onClose={() => setExplorerOpen(false)}
             onFileSelect={(path) => setEditingFile(path)}
+            editingFile={editingFile}
           />
         )}
 
