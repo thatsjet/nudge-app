@@ -120,6 +120,7 @@ function loadSettings(): Record<string, any> {
     model: 'claude-sonnet-4-5',
     activeProvider: 'anthropic',
     onboardingComplete: false,
+    editorLineWrap: true,
   };
 }
 
@@ -230,10 +231,17 @@ ipcMain.handle('vault:read-frontmatter', async (_event, relativePath: string) =>
   return frontmatter;
 });
 
+function notifyVaultChanged(): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('vault:changed');
+  }
+}
+
 ipcMain.handle('vault:write-file', async (_event, relativePath: string, content: string) => {
   const fullPath = resolveVaultPath(relativePath);
   ensureDir(path.dirname(fullPath));
   fs.writeFileSync(fullPath, content, 'utf-8');
+  notifyVaultChanged();
 });
 
 ipcMain.handle('vault:edit-file', async (_event, relativePath: string, oldText: string, newText: string) => {
@@ -244,6 +252,7 @@ ipcMain.handle('vault:edit-file', async (_event, relativePath: string, oldText: 
   }
   const updated = content.replace(oldText, newText);
   fs.writeFileSync(fullPath, updated, 'utf-8');
+  notifyVaultChanged();
 });
 
 ipcMain.handle('vault:list-files', async (_event, directory: string) => {
@@ -268,6 +277,7 @@ ipcMain.handle('vault:create-file', async (_event, relativePath: string, content
     throw new Error(`File already exists: ${relativePath}`);
   }
   fs.writeFileSync(fullPath, content, 'utf-8');
+  notifyVaultChanged();
 });
 
 ipcMain.handle('vault:move-file', async (_event, sourcePath: string, destPath: string) => {
@@ -281,6 +291,28 @@ ipcMain.handle('vault:move-file', async (_event, sourcePath: string, destPath: s
   }
   ensureDir(path.dirname(fullDest));
   fs.renameSync(fullSource, fullDest);
+  notifyVaultChanged();
+});
+
+ipcMain.handle('vault:delete-file', async (_event, relativePath: string) => {
+  const fullPath = resolveVaultPath(relativePath);
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`File not found: ${relativePath}`);
+  }
+  await fs.promises.unlink(fullPath);
+  notifyVaultChanged();
+});
+
+ipcMain.handle('vault:list-directories', async () => {
+  const vaultPath = getVaultPath();
+  if (!fs.existsSync(vaultPath)) {
+    return [];
+  }
+  const entries = fs.readdirSync(vaultPath, { withFileTypes: true });
+  return entries
+    .filter(e => e.isDirectory() && !e.name.startsWith('.'))
+    .map(e => e.name)
+    .sort();
 });
 
 ipcMain.handle('vault:get-path', async () => {
@@ -488,6 +520,7 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       if (!fullPath.startsWith(vaultPath)) throw new Error('Path outside vault');
       ensureDir(path.dirname(fullPath));
       fs.writeFileSync(fullPath, toolInput.content, 'utf-8');
+      notifyVaultChanged();
       return `File written: ${toolInput.path}`;
     }
     case 'edit_file': {
@@ -496,6 +529,7 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       const content = fs.readFileSync(fullPath, 'utf-8');
       if (!content.includes(toolInput.old_text)) return `Error: Text not found in ${toolInput.path}`;
       fs.writeFileSync(fullPath, content.replace(toolInput.old_text, toolInput.new_text), 'utf-8');
+      notifyVaultChanged();
       return `File edited: ${toolInput.path}`;
     }
     case 'list_files': {
@@ -515,6 +549,7 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       if (fs.existsSync(fullPath)) return `Error: File already exists: ${toolInput.path}`;
       ensureDir(path.dirname(fullPath));
       fs.writeFileSync(fullPath, toolInput.content, 'utf-8');
+      notifyVaultChanged();
       return `File created: ${toolInput.path}`;
     }
     case 'move_file': {
@@ -526,6 +561,7 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       if (fs.existsSync(destPath)) return `Error: Destination file already exists: ${toolInput.destination}`;
       ensureDir(path.dirname(destPath));
       fs.renameSync(srcPath, destPath);
+      notifyVaultChanged();
       return `File moved: ${toolInput.source} → ${toolInput.destination}`;
     }
     case 'archive_tasks': {
@@ -582,6 +618,7 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
         fs.writeFileSync(archivePath, header + `\n${dateMarker}\n\n` + archivedContent, 'utf-8');
       }
 
+      notifyVaultChanged();
       return `Archived ${completedTasks.length} completed task(s) under ${toolInput.date}.`;
     }
     default:

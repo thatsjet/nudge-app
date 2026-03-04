@@ -83,6 +83,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [appVersion, setAppVersion] = useState('');
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [autoCheckUpdates, setAutoCheckUpdates] = useState(true);
+  const [editorLineWrap, setEditorLineWrap] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -115,6 +116,9 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
         const autoCheck = await window.nudge.settings.get('autoCheckUpdates');
         setAutoCheckUpdates(autoCheck !== false);
 
+        const lineWrap = await window.nudge.settings.get('editorLineWrap');
+        setEditorLineWrap(lineWrap !== false);
+
         const status = await window.nudge.updater.getStatus();
         setUpdateStatus(status);
       } catch {
@@ -146,6 +150,12 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
 
     return () => clearTimeout(timer);
   }, [updateStatus.state]);
+
+  const handleEditorLineWrapToggle = async () => {
+    const newValue = !editorLineWrap;
+    setEditorLineWrap(newValue);
+    await window.nudge.settings.set('editorLineWrap', newValue);
+  };
 
   const handleAutoCheckToggle = async () => {
     const newValue = !autoCheckUpdates;
@@ -373,6 +383,24 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Editor */}
+          <div className="settings-section">
+            <label className="settings-label">Editor</label>
+            <div className="settings-toggle-row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={editorLineWrap}
+                  onChange={handleEditorLineWrapToggle}
+                />
+                Line wrap
+              </label>
+            </div>
+            <p className="settings-description" style={{ marginTop: 4 }}>
+              Wrap long lines in the markdown editor instead of scrolling horizontally.
+            </p>
           </div>
 
           <div className="settings-divider" />
