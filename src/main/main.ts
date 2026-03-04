@@ -303,18 +303,6 @@ ipcMain.handle('vault:delete-file', async (_event, relativePath: string) => {
   notifyVaultChanged();
 });
 
-ipcMain.handle('vault:list-directories', async () => {
-  const vaultPath = getVaultPath();
-  if (!fs.existsSync(vaultPath)) {
-    return [];
-  }
-  const entries = fs.readdirSync(vaultPath, { withFileTypes: true });
-  return entries
-    .filter(e => e.isDirectory() && !e.name.startsWith('.'))
-    .map(e => e.name)
-    .sort();
-});
-
 ipcMain.handle('vault:get-path', async () => {
   return getVaultPath();
 });

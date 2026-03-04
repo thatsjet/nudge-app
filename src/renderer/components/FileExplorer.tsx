@@ -32,8 +32,6 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [moveSubmenuPath, setMoveSubmenuPath] = useState<string | null>(null);
-  const [directories, setDirectories] = useState<string[]>([]);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const entriesRef = useRef<TreeEntry[]>([]);
 
@@ -194,12 +192,10 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, filePath: entry.path, fileName: entry.name });
-    setMoveSubmenuPath(null);
   };
 
   const closeContextMenu = () => {
     setContextMenu(null);
-    setMoveSubmenuPath(null);
   };
 
   // --- Rename ---
@@ -261,28 +257,20 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     }
   };
 
-  // --- Move to... ---
-  const openMoveSubmenu = async (filePath: string) => {
-    try {
-      const dirs = await window.nudge.vault.listDirectories();
-      setDirectories(dirs);
-      setMoveSubmenuPath(filePath);
-    } catch {
-      setDirectories([]);
-    }
-  };
-
-  const moveToDirectory = async (filePath: string, fileName: string, targetDir: string) => {
+  // --- Archive ---
+  const archiveFile = async (filePath: string, fileName: string) => {
     closeContextMenu();
+    const confirmed = window.confirm('Are you sure you\'d like to archive this file?');
+    if (!confirmed) return;
     try {
-      const newPath = `${targetDir}/${fileName}`;
+      const newPath = `archive/${fileName}`;
       await window.nudge.vault.moveFile(filePath, newPath);
       if (editingFile === filePath) {
-        onFileSelect(newPath);
+        onFileSelect(null);
       }
       await loadRoot();
     } catch (err: any) {
-      console.error('Move failed:', err?.message || err);
+      console.error('Archive failed:', err?.message || err);
     }
   };
 
@@ -307,35 +295,18 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     const { filePath, fileName } = contextMenu;
     const currentDir = getParentDir(filePath);
 
+    const isIdea = currentDir === 'ideas';
+
     const items: ContextMenuEntry[] = [
       { label: 'Rename', onClick: () => startRename(filePath, fileName) },
       { label: 'Duplicate', onClick: () => duplicateFile(filePath, fileName) },
     ];
 
-    // Move to... with submenu
-    if (moveSubmenuPath === filePath) {
-      items.push({ separator: true });
-      for (const dir of directories) {
-        const isCurrentDir = dir === currentDir;
-        items.push({
-          label: `Move to ${dir}/`,
-          onClick: () => moveToDirectory(filePath, fileName, dir),
-          disabled: isCurrentDir,
-        });
-      }
-      // Also allow moving to root
-      const isRoot = currentDir === '';
-      items.push({
-        label: 'Move to / (root)',
-        onClick: () => moveToDirectory(filePath, fileName, ''),
-        disabled: isRoot,
-      });
-      items.push({ separator: true });
-    } else {
-      items.push({ label: 'Move to...', onClick: () => openMoveSubmenu(filePath) });
-      items.push({ separator: true });
+    if (isIdea) {
+      items.push({ label: 'Archive', onClick: () => archiveFile(filePath, fileName) });
     }
 
+    items.push({ separator: true });
     items.push({ label: 'Delete', onClick: () => deleteFile(filePath), danger: true });
 
     return items;
