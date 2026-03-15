@@ -182,7 +182,7 @@ export default function ChatPanel({
               </div>
             )}
             {isStreaming && !streamingContent && (
-              <div className="chat-panel-typing">
+              <div className="chat-panel-typing" role="status" aria-live="polite" aria-label="Nudge is typing">
                 <span className="chat-panel-typing-dot" />
                 <span className="chat-panel-typing-dot" />
                 <span className="chat-panel-typing-dot" />
