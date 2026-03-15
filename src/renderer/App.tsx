@@ -259,14 +259,12 @@ export default function App() {
       />
 
       <div className="app-body">
-        {explorerOpen && (
-          <FileExplorer
-            isOpen={explorerOpen}
-            onClose={() => setExplorerOpen(false)}
-            onFileSelect={(path) => setEditingFile(path)}
-            editingFile={editingFile}
-          />
-        )}
+        <FileExplorer
+          isOpen={explorerOpen}
+          onClose={() => setExplorerOpen(false)}
+          onFileSelect={(path) => setEditingFile(path)}
+          editingFile={editingFile}
+        />
 
         <div className="app-main">
           {editingFile ? (
