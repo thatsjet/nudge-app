@@ -263,11 +263,20 @@ ipcMain.handle('vault:list-files', async (_event, directory: string) => {
   const entries = fs.readdirSync(fullPath, { withFileTypes: true });
   return entries
     .filter(e => !e.name.startsWith('.'))
-    .map(e => ({
-      name: e.name,
-      isDirectory: e.isDirectory(),
-      path: path.join(directory, e.name),
-    }));
+    .map(e => {
+      const entryPath = path.join(directory, e.name);
+      let lastModified: number | undefined;
+      try {
+        const stat = fs.statSync(path.join(fullPath, e.name));
+        lastModified = stat.mtimeMs;
+      } catch {}
+      return {
+        name: e.name,
+        isDirectory: e.isDirectory(),
+        path: entryPath,
+        lastModified,
+      };
+    });
 });
 
 ipcMain.handle('vault:create-file', async (_event, relativePath: string, content: string) => {
