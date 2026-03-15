@@ -15,18 +15,37 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
 
   return (
     <div className={`message-bubble ${isUser ? 'message-bubble--user' : 'message-bubble--assistant'}`}>
-      <div className="message-bubble-content markdown-content">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            input: ({ node, ...props }) => (
-              <input {...props} />
-            ),
-          }}
-        >
-          {message.content}
-        </ReactMarkdown>
-      </div>
+      {isUser && (
+        <div className="message-bubble-row">
+          <div className="message-bubble-content markdown-content">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                input: ({ node, ...props }) => (
+                  <input {...props} />
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
+          <div className="message-bubble-avatar">U</div>
+        </div>
+      )}
+      {!isUser && (
+        <div className="message-bubble-content markdown-content">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              input: ({ node, ...props }) => (
+                <input {...props} />
+              ),
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
+        </div>
+      )}
       <span className="message-bubble-timestamp">{timeStr}</span>
     </div>
   );
