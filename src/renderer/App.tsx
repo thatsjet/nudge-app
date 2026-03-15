@@ -298,19 +298,20 @@ export default function App() {
           />
         )}
 
-        <main id="main-content" className="app-main">
-          {editingFile ? (
-            <FileEditor
-              filePath={editingFile}
-              onClose={() => setEditingFile(null)}
+        <main id="main-content" className={`app-main ${editingFile ? 'app-main--split' : ''}`}>
+          <div className="app-chat-container">
+            <ChatPanel
+              messages={messages}
+              isStreaming={isStreaming}
+              streamingContent={streamingContent}
+              onSendMessage={handleSendMessage}
             />
-          ) : (
-            <div className="app-chat-container">
-              <ChatPanel
-                messages={messages}
-                isStreaming={isStreaming}
-                streamingContent={streamingContent}
-                onSendMessage={handleSendMessage}
+          </div>
+          {editingFile && (
+            <div className="app-editor-pane">
+              <FileEditor
+                filePath={editingFile}
+                onClose={() => setEditingFile(null)}
               />
             </div>
           )}
