@@ -1,8 +1,20 @@
+@keyframes file-editor-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .file-editor {
   display: flex;
   flex-direction: column;
   height: 100%;
   background: var(--bg-chat);
+  animation: file-editor-fade-in 200ms ease both;
 }
 
 .file-editor-header {

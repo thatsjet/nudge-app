@@ -392,7 +392,7 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
   }
 
   return (
-    <div className="file-explorer">
+    <div className={`file-explorer${isOpen ? '' : ' file-explorer--closed'}`}>
       <div className="file-explorer-header">
         <span className="file-explorer-header-title">Vault</span>
         <div className="file-explorer-header-actions">

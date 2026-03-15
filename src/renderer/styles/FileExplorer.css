@@ -7,6 +7,15 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
+  margin-left: 0;
+  transition: margin-left 200ms ease, opacity 200ms ease;
+  opacity: 1;
+}
+
+.file-explorer.file-explorer--closed {
+  margin-left: -260px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .file-explorer--embedded {
