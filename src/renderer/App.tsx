@@ -250,6 +250,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       <Header
         onToggleExplorer={() => setExplorerOpen(!explorerOpen)}
         onOpenSettings={() => setSettingsOpen(true)}
@@ -268,7 +269,7 @@ export default function App() {
           />
         )}
 
-        <div className="app-main">
+        <main id="main-content" className="app-main">
           {editingFile ? (
             <FileEditor
               filePath={editingFile}
@@ -284,7 +285,7 @@ export default function App() {
               />
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       <Settings

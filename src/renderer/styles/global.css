@@ -9,7 +9,7 @@
   --bg-hover: #ebe8e4;
   --text-primary: #2c2c2c;
   --text-secondary: #6b6560;
-  --text-muted: #9b958f;
+  --text-muted: #756e68;
   --accent: #5a9e72;
   --accent-light: #82b894;
   --border: #e0dcd7;
@@ -33,7 +33,7 @@
   --bg-hover: #353230;
   --text-primary: #f2efeb;
   --text-secondary: #bdb5ab;
-  --text-muted: #8a8078;
+  --text-muted: #928880;
   --accent: #6db882;
   --accent-light: #4a8a60;
   --border: #353230;
@@ -53,7 +53,7 @@
     --bg-hover: #353230;
     --text-primary: #f2efeb;
     --text-secondary: #bdb5ab;
-    --text-muted: #8a8078;
+    --text-muted: #928880;
     --accent: #6db882;
     --accent-light: #4a8a60;
     --border: #353230;
@@ -117,6 +117,26 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* Skip-to-content link */
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 4px;
+  z-index: 1000;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.skip-to-content:focus {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 /* Input reset */
 input, textarea, button {
   font-family: inherit;
@@ -128,6 +148,17 @@ button {
   cursor: pointer;
   border: none;
   background: none;
+}
+
+/* Focus-visible outlines for all interactive elements */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Markdown content styling */
