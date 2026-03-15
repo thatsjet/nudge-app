@@ -7,6 +7,7 @@ interface FileExplorerProps {
   onClose: () => void;
   onFileSelect: (path: string | null) => void;
   editingFile?: string | null;
+  embedded?: boolean;
 }
 
 interface TreeEntry {
@@ -25,7 +26,7 @@ interface ContextMenuState {
   fileName: string;
 }
 
-export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFile }: FileExplorerProps) {
+export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFile, embedded }: FileExplorerProps) {
   const [entries, setEntries] = useState<TreeEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [priorities, setPriorities] = useState<Record<string, string>>({});
@@ -365,6 +366,30 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
   );
 
   if (!isOpen) return null;
+
+  if (embedded) {
+    return (
+      <div className="file-explorer file-explorer--embedded">
+        <div className="file-explorer-tree">
+          {loading ? (
+            <div className="file-explorer-empty">Loading...</div>
+          ) : entries.length > 0 ? (
+            entries.map(renderEntry)
+          ) : (
+            <div className="file-explorer-empty">No files found</div>
+          )}
+        </div>
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={buildContextMenuItems()}
+            onClose={closeContextMenu}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="file-explorer">

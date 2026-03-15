@@ -490,6 +490,22 @@ ipcMain.handle('sessions:add-message', async (_event, sessionId: string, message
   fs.writeFileSync(filePath, JSON.stringify(session, null, 2));
 });
 
+ipcMain.handle('sessions:update', async (_event, sessionId: string, updates: any) => {
+  const filePath = path.join(sessionsDir, `${sessionId}.json`);
+  if (!fs.existsSync(filePath)) throw new Error('Session not found');
+  const session = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  if (updates.title !== undefined) session.title = updates.title;
+  if (updates.starred !== undefined) session.starred = updates.starred;
+  fs.writeFileSync(filePath, JSON.stringify(session, null, 2));
+});
+
+ipcMain.handle('sessions:delete', async (_event, sessionId: string) => {
+  const filePath = path.join(sessionsDir, `${sessionId}.json`);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+});
+
 // --- API IPC Handlers ---
 
 // Process tool calls (provider-agnostic — works with any LLM)

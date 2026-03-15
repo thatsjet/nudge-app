@@ -9,6 +9,12 @@
   overflow: hidden;
 }
 
+.file-explorer--embedded {
+  width: auto;
+  border-right: none;
+  flex: 1;
+}
+
 .file-explorer-header {
   display: flex;
   align-items: center;

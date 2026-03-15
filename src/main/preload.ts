@@ -224,6 +224,8 @@ contextBridge.exposeInMainWorld('nudge', {
     get: (id: string) => invoke('sessions:get', id),
     create: () => invoke('sessions:create'),
     addMessage: (sessionId: string, message: any) => invoke('sessions:add-message', sessionId, message),
+    update: (sessionId: string, updates: any) => invoke('sessions:update', sessionId, updates),
+    delete: (sessionId: string) => invoke('sessions:delete', sessionId),
   },
   updater: {
     checkForUpdates: () => invoke<void>('updater:check'),
