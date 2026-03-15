@@ -22,6 +22,7 @@ export interface Session {
   title: string;
   createdAt: number;
   updatedAt: number;
+  starred?: boolean;
   messages: ChatMessage[];
 }
 
@@ -114,6 +115,8 @@ export interface NudgeAPI {
     get: (id: string) => Promise<Session | null>;
     create: () => Promise<Session>;
     addMessage: (sessionId: string, message: ChatMessage) => Promise<void>;
+    update: (sessionId: string, updates: Partial<Pick<Session, 'title' | 'starred'>>) => Promise<void>;
+    delete: (sessionId: string) => Promise<void>;
   };
 }
 

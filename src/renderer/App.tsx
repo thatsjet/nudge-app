@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ChatMessage } from '../shared/types';
+import { ChatMessage, Session } from '../shared/types';
 import ChatPanel from './components/ChatPanel';
-import FileExplorer from './components/FileExplorer';
 import FileEditor from './components/FileEditor';
 import Settings from './components/Settings';
 import Onboarding from './components/Onboarding';
 import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import './styles/App.css';
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [explorerOpen, setExplorerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
@@ -20,6 +19,8 @@ export default function App() {
   const [theme, setTheme] = useState<string>('system');
   const [hasUpdate, setHasUpdate] = useState(false);
   const [sessionTitle, setSessionTitle] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const streamingContentRef = useRef('');
 
@@ -86,6 +87,23 @@ export default function App() {
     setStreamingContent('');
     streamingContentRef.current = '';
     setIsStreaming(false);
+    setSessionRefreshKey(k => k + 1);
+  }
+
+  async function handleSelectSession(session: Session) {
+    if (session.id === currentSessionId) return;
+    if (cancelStreamRef.current) {
+      cancelStreamRef.current();
+    }
+    const full = await window.nudge.sessions.get(session.id);
+    if (full) {
+      setCurrentSessionId(full.id);
+      setMessages(full.messages);
+      setStreamingContent('');
+      streamingContentRef.current = '';
+      setIsStreaming(false);
+      setEditingFile(null);
+    }
   }
 
   async function buildSystemPrompt(): Promise<string> {
@@ -257,21 +275,25 @@ export default function App() {
   return (
     <div className="app">
       <Header
-        onToggleExplorer={() => setExplorerOpen(!explorerOpen)}
+        onToggleExplorer={() => setSidebarOpen(!sidebarOpen)}
         onOpenSettings={() => setSettingsOpen(true)}
         onNewChat={handleNewChat}
-        explorerOpen={explorerOpen}
+        explorerOpen={sidebarOpen}
         hasUpdate={hasUpdate}
         sessionTitle={sessionTitle}
       />
 
       <div className="app-body">
-        {explorerOpen && (
-          <FileExplorer
-            isOpen={explorerOpen}
-            onClose={() => setExplorerOpen(false)}
+        {sidebarOpen && (
+          <Sidebar
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            currentSessionId={currentSessionId}
+            onSelectSession={handleSelectSession}
+            onNewChat={handleNewChat}
             onFileSelect={(path) => setEditingFile(path)}
             editingFile={editingFile}
+            sessionRefreshKey={sessionRefreshKey}
           />
         )}
 
