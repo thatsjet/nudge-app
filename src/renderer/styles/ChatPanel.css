@@ -34,7 +34,7 @@
 }
 
 .chat-panel-empty-title {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -58,7 +58,7 @@
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 20px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-primary);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;

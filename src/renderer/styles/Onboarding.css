@@ -29,21 +29,21 @@
 }
 
 .onboarding-heading {
-  font-size: 28px;
+  font-size: var(--text-2xl);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .onboarding-text {
-  font-size: 16px;
+  font-size: var(--text-md);
   color: var(--text-secondary);
   line-height: 1.7;
   max-width: 380px;
 }
 
 .onboarding-mantra {
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--accent);
   font-style: italic;
@@ -54,7 +54,7 @@
   margin-top: 12px;
   padding: 12px 32px;
   border-radius: var(--radius-sm);
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 500;
   transition: opacity 150ms ease;
 }
@@ -81,7 +81,7 @@
 
 .onboarding-input-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 6px;
@@ -99,7 +99,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-base);
   outline: none;
   transition: border-color 150ms ease;
 }
@@ -113,7 +113,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   transition: background 150ms ease;
 }
 
@@ -122,7 +122,7 @@
 }
 
 .onboarding-link {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--accent);
   text-decoration: none;
   margin-top: 4px;
@@ -133,7 +133,7 @@
 }
 
 .onboarding-feedback {
-  font-size: 13px;
+  font-size: var(--text-sm);
   padding: 6px 12px;
   border-radius: 6px;
   width: 100%;
@@ -182,13 +182,13 @@
 }
 
 .onboarding-provider-name {
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .onboarding-provider-desc {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-muted);
 }
 
@@ -213,7 +213,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   text-align: center;
   transition: all 150ms ease;
@@ -233,7 +233,7 @@
 
 .onboarding-vault-path {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--text-primary);
   background: var(--bg-secondary);
   padding: 10px 16px;
@@ -276,7 +276,7 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   transition: background 150ms ease, color 150ms ease;
 }
@@ -294,7 +294,7 @@
 .onboarding-nav-btn--skip {
   color: var(--text-muted);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 .onboarding-nav-btn--skip:hover {
@@ -303,7 +303,7 @@
 }
 
 .onboarding-nav-arrow {
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1;
 }
 
@@ -324,7 +324,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-family: inherit;
   line-height: 1.6;
   outline: none;
@@ -345,7 +345,7 @@
 .onboarding-input--mantra {
   text-align: center;
   font-style: italic;
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 500;
 }
 
@@ -367,7 +367,7 @@
 
 .onboarding-energy-label {
   width: 80px;
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text-primary);
   text-align: left;
@@ -387,7 +387,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--text-xs);
   text-align: center;
   transition: all 150ms ease;
   cursor: pointer;
@@ -437,13 +437,13 @@
 }
 
 .onboarding-collapsible-title {
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .onboarding-collapsible-arrow {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   transition: transform 150ms ease;
 }
@@ -477,7 +477,7 @@
   border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 500;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   animation: onboarding-toast-in 300ms ease;
@@ -492,4 +492,10 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+.onboarding-text--hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: -4px;
 }
