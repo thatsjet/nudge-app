@@ -243,26 +243,14 @@
   text-align: center;
 }
 
-.onboarding-progress {
-  display: flex;
-  gap: 6px;
+/* --- Step Indicator (replaces dots) --- */
+
+.onboarding-step-indicator {
   margin-top: 32px;
-}
-
-.onboarding-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 150ms ease;
-}
-
-.onboarding-dot--active {
-  background: var(--accent);
-}
-
-.onboarding-dot--done {
-  background: var(--accent-light);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
 }
 
 /* --- Wizard Navigation --- */
@@ -416,10 +404,92 @@
   font-weight: 500;
 }
 
-/* --- Hint text on final step --- */
+/* --- Collapsible Sections --- */
 
-.onboarding-text--hint {
-  font-size: 13px;
+.onboarding-collapsible-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.onboarding-collapsible {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.onboarding-collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-input);
+  border: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.onboarding-collapsible-header:hover {
+  background: var(--bg-hover);
+}
+
+.onboarding-collapsible-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.onboarding-collapsible-arrow {
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: -4px;
+  transition: transform 150ms ease;
+}
+
+.onboarding-collapsible-arrow--open {
+  transform: rotate(180deg);
+}
+
+.onboarding-collapsible-body {
+  padding: 12px 16px 16px;
+  background: var(--bg-primary);
+}
+
+.onboarding-collapsible-body .onboarding-input-group {
+  max-width: none;
+}
+
+.onboarding-collapsible-body .onboarding-energy-grid {
+  max-width: none;
+}
+
+/* --- Toast Notification --- */
+
+.onboarding-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  animation: onboarding-toast-in 300ms ease;
+}
+
+@keyframes onboarding-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
