@@ -34,7 +34,7 @@
 }
 
 .app-loading-text {
-  font-size: 24px;
+  font-size: var(--text-xl);
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.02em;
