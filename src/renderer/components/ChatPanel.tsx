@@ -31,19 +31,78 @@ function useIsDark(): boolean {
   return isDark;
 }
 
+type TimeOfDay = 'morning' | 'afternoon' | 'evening';
+
+function getTimeOfDay(): TimeOfDay {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+function getGreeting(timeOfDay: TimeOfDay, userName: string | null): string {
+  const name = userName ? `, ${userName}` : '';
+  switch (timeOfDay) {
+    case 'morning': return `Good morning${name}`;
+    case 'afternoon': return `Good afternoon${name}`;
+    case 'evening': return `Winding down for the evening?`;
+  }
+}
+
+const CHIPS_BY_TIME: Record<TimeOfDay, string[]> = {
+  morning: [
+    'Review today\u2019s tasks',
+    'Plan my focus blocks',
+    'I have an idea',
+    'Start my day',
+  ],
+  afternoon: [
+    'I have 30 minutes',
+    'What should I tackle next?',
+    'I have an idea',
+    'Add a task',
+  ],
+  evening: [
+    'Capture what I got done',
+    'Brain dump before tomorrow',
+    'Add a task',
+    'I have an idea',
+  ],
+};
+
+function parseConfigField(config: string, field: string): string | null {
+  const regex = new RegExp(`## ${field}\\s*\\n\\s*([\\s\\S]*?)(?=\\n##|$)`);
+  const match = config.match(regex);
+  if (!match) return null;
+  return match[1].trim() || null;
+}
+
+function extractName(aboutMe: string): string | null {
+  // Try common patterns like "I'm Jeremy", "My name is Jeremy", "I am Jeremy"
+  const patterns = [
+    /(?:I'm|I am|my name is|name's)\s+([A-Z][a-z]+)/i,
+    /^([A-Z][a-z]+)\s+here/i,
+  ];
+  for (const pattern of patterns) {
+    const match = aboutMe.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function extractMantra(mantraSection: string): string | null {
+  // Mantra is stored as **"mantra text"**
+  const match = mantraSection.match(/\*\*"(.+?)"\*\*/);
+  if (match) return match[1];
+  return mantraSection;
+}
+
 interface ChatPanelProps {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingContent: string;
   onSendMessage: (content: string) => void;
 }
-
-const SUGGESTION_CHIPS = [
-  'Start my day',
-  'I have an idea',
-  'I have 30 minutes',
-  'Add a task',
-];
 
 export default function ChatPanel({
   messages,
@@ -53,12 +112,36 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const isDark = useIsDark();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [mantra, setMantra] = useState<string | null>(null);
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(getTimeOfDay);
+
+  // Load user config from vault
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const config = await window.nudge.vault.readFile('config.md');
+        const aboutMe = parseConfigField(config, 'About Me');
+        if (aboutMe) setUserName(extractName(aboutMe));
+        const mantraSection = parseConfigField(config, 'Mantra');
+        if (mantraSection) setMantra(extractMantra(mantraSection));
+      } catch {}
+    }
+    loadConfig();
+  }, []);
+
+  // Update time of day every minute
+  useEffect(() => {
+    const interval = setInterval(() => setTimeOfDay(getTimeOfDay()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
   const isEmpty = messages.length === 0 && !isStreaming;
+  const chips = CHIPS_BY_TIME[timeOfDay];
 
   return (
     <div className="chat-panel">
@@ -68,9 +151,12 @@ export default function ChatPanel({
             <div className="chat-panel-empty-logo">
               <img src='./icon_sm.png' alt="Nudge" width="56" height="56" />
             </div>
-            <h2 className="chat-panel-empty-title">What would you like to work on?</h2>
+            <h2 className="chat-panel-empty-title">{getGreeting(timeOfDay, userName)}</h2>
+            {mantra && (
+              <p className="chat-panel-empty-mantra">{mantra}</p>
+            )}
             <div className="chat-panel-empty-chips">
-              {SUGGESTION_CHIPS.map((chip) => (
+              {chips.map((chip) => (
                 <button
                   key={chip}
                   className="chat-panel-chip"
