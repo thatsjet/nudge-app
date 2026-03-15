@@ -19,6 +19,7 @@ export default function App() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [theme, setTheme] = useState<string>('system');
   const [hasUpdate, setHasUpdate] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState<string>('');
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const streamingContentRef = useRef('');
 
@@ -80,6 +81,7 @@ export default function App() {
   async function startNewSession() {
     const session = await window.nudge.sessions.create();
     setCurrentSessionId(session.id);
+    setSessionTitle('');
     setMessages([]);
     setStreamingContent('');
     streamingContentRef.current = '';
@@ -135,6 +137,10 @@ export default function App() {
     // Save user message to session
     if (currentSessionId) {
       await window.nudge.sessions.addMessage(currentSessionId, userMessage);
+      // Update title on first user message (backend sets title to first 50 chars)
+      if (messages.length === 0) {
+        setSessionTitle(content.trim().slice(0, 50));
+      }
     }
 
     try {
@@ -256,6 +262,7 @@ export default function App() {
         onNewChat={handleNewChat}
         explorerOpen={explorerOpen}
         hasUpdate={hasUpdate}
+        sessionTitle={sessionTitle}
       />
 
       <div className="app-body">
