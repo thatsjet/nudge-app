@@ -6,6 +6,7 @@ import { VAULT_TOOLS } from './providers/tools';
 import { ProviderId, UpdateStatus } from './providers/types';
 import { autoUpdater } from 'electron-updater';
 import { truncate, summarizeForLog, formatError } from './utils';
+import { runAgenticLoop } from './agenticLoop';
 
 let mainWindow: BrowserWindow | null = null;
 const IS_DEV = process.argv.includes('--dev');
@@ -460,7 +461,8 @@ ipcMain.handle('sessions:list', async () => {
   const files = fs.readdirSync(sessionsDir).filter(f => f.endsWith('.json'));
   const sessions = files.map(f => {
     const data = JSON.parse(fs.readFileSync(path.join(sessionsDir, f), 'utf-8'));
-    return { ...data, messages: undefined }; // Don't send full messages in list
+    const messageCount = Array.isArray(data.messages) ? data.messages.length : 0;
+    return { ...data, messages: undefined, messageCount }; // Don't send full messages in list
   });
   sessions.sort((a: any, b: any) => b.updatedAt - a.updatedAt);
   return sessions;
@@ -682,69 +684,25 @@ ipcMain.handle('api:send-message', async (event, messages: any[], systemPrompt: 
     }
 
     // Agentic loop: keep calling the API while there are tool uses
-    let currentMessages = [...messages];
-    let continueLoop = true;
-    let round = 0;
-
-    while (continueLoop) {
-      round += 1;
-      devLog('api:send-message', 'round start', {
-        requestId,
-        round,
-        currentMessageCount: currentMessages.length,
-      });
-      const { result, abort } = provider.sendMessageStream({
-        messages: currentMessages,
-        systemPrompt,
-        model,
-        tools: VAULT_TOOLS,
-        onText: (chunk) => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('api:stream-chunk', chunk);
-          }
-        },
-      });
-
-      currentAbort = abort;
-
-      const roundResult = await result;
-      devLog('api:send-message', 'round complete', {
-        requestId,
-        round,
-        textLength: roundResult.textContent.length,
-        toolCallCount: roundResult.toolCalls.length,
-        toolNames: roundResult.toolCalls.map((c) => c.name),
-      });
-
-      if (roundResult.toolCalls.length > 0) {
-        // Process tool calls
-        const toolResults = [];
-        for (const call of roundResult.toolCalls) {
-          devLog('api:send-message', 'executing tool call', {
-            requestId,
-            round,
-            toolName: call.name,
-            toolCallId: call.id,
-          });
-          const toolResult = await processToolCall(call.name, call.arguments);
-          toolResults.push({ toolCallId: call.id, content: toolResult });
-        }
-
-        // Build follow-up messages in provider-native format
-        const followUp = provider.buildToolResultMessages(
-          roundResult.rawAssistantMessage,
-          toolResults
-        );
-        currentMessages = [...currentMessages, ...followUp];
-
-        // Signal tool use to renderer
+    await runAgenticLoop({
+      provider,
+      messages,
+      systemPrompt,
+      model,
+      tools: VAULT_TOOLS,
+      processToolCall,
+      onText: (chunk) => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('api:tool-use', roundResult.toolCalls.map((c) => c.name));
+          mainWindow.webContents.send('api:stream-chunk', chunk);
         }
-      } else {
-        continueLoop = false;
-      }
-    }
+      },
+      onToolUse: (toolNames) => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('api:tool-use', toolNames);
+        }
+      },
+      setAbort: (abort) => { currentAbort = abort; },
+    });
 
     devLog('api:send-message', 'complete', { requestId });
     if (mainWindow && !mainWindow.isDestroyed()) {
