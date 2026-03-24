@@ -37,7 +37,7 @@ export default function App() {
       }
 
       if (complete) {
-        await startNewSession();
+        await resumeOrStartSession();
       }
     }
     init();
@@ -71,6 +71,37 @@ export default function App() {
     return cleanup;
   }, []);
 
+  // Listen for nudge events
+  useEffect(() => {
+    const cleanupFired = window.nudge.nudges.onFired(() => {
+      // Refresh session list so the new nudge session appears
+      setSessionRefreshKey(k => k + 1);
+    });
+
+    const cleanupNavigate = window.nudge.nudges.onNavigate(async (data) => {
+      // Navigate to the nudge session when notification is clicked
+      const session = await window.nudge.sessions.get(data.sessionId);
+      if (session) {
+        if (cancelStreamRef.current) {
+          cancelStreamRef.current();
+        }
+        setCurrentSessionId(session.id);
+        setMessages(session.messages);
+        setSessionTitle(session.title);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+        setIsStreaming(false);
+        setEditingFile(null);
+        setSessionRefreshKey(k => k + 1);
+      }
+    });
+
+    return () => {
+      cleanupFired();
+      cleanupNavigate();
+    };
+  }, []);
+
   function applyTheme(t: string) {
     if (t === 'system') {
       document.documentElement.removeAttribute('data-theme');
@@ -88,6 +119,26 @@ export default function App() {
     streamingContentRef.current = '';
     setIsStreaming(false);
     setSessionRefreshKey(k => k + 1);
+  }
+
+  async function resumeOrStartSession() {
+    const sessions = await window.nudge.sessions.list();
+    if (sessions.length > 0) {
+      // Sessions are sorted by updatedAt desc — resume the most recent one
+      const latest = sessions[0];
+      const full = await window.nudge.sessions.get(latest.id);
+      if (full) {
+        setCurrentSessionId(full.id);
+        setMessages(full.messages);
+        setSessionTitle(full.title);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+        setIsStreaming(false);
+        setSessionRefreshKey(k => k + 1);
+        return;
+      }
+    }
+    await startNewSession();
   }
 
   async function handleSelectSession(session: Session) {
