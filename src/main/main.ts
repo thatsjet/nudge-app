@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, Menu, Notification } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { getProvider, resetProvider } from './providers/registry';
@@ -7,6 +7,7 @@ import { ProviderId, UpdateStatus } from './providers/types';
 import { autoUpdater } from 'electron-updater';
 import { truncate, summarizeForLog, formatError } from './utils';
 import { runAgenticLoop } from './agenticLoop';
+import { NudgeScheduler, NudgeType, NudgeSettings, DEFAULT_NUDGE_SETTINGS, NUDGE_PROMPTS } from './nudgeScheduler';
 
 let mainWindow: BrowserWindow | null = null;
 const IS_DEV = process.argv.includes('--dev');
@@ -636,8 +637,170 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       notifyVaultChanged();
       return `Archived ${completedTasks.length} completed task(s) under ${toolInput.date}.`;
     }
+    case 'update_nudge_settings': {
+      const settings = loadSettings();
+      const nudges: NudgeSettings = { ...DEFAULT_NUDGE_SETTINGS, ...settings.nudges };
+      const changes: string[] = [];
+
+      if (toolInput.morning_enabled !== undefined) {
+        nudges.morning.enabled = toolInput.morning_enabled === 'true';
+        changes.push(`Morning nudge ${nudges.morning.enabled ? 'enabled' : 'disabled'}`);
+      }
+      if (toolInput.morning_time !== undefined) {
+        nudges.morning.time = toolInput.morning_time;
+        changes.push(`Morning nudge time set to ${toolInput.morning_time}`);
+      }
+      if (toolInput.midday_enabled !== undefined) {
+        nudges.midday.enabled = toolInput.midday_enabled === 'true';
+        changes.push(`Mid-day nudge ${nudges.midday.enabled ? 'enabled' : 'disabled'}`);
+      }
+      if (toolInput.midday_time !== undefined) {
+        nudges.midday.time = toolInput.midday_time;
+        changes.push(`Mid-day nudge time set to ${toolInput.midday_time}`);
+      }
+      if (toolInput.endOfDay_enabled !== undefined) {
+        nudges.endOfDay.enabled = toolInput.endOfDay_enabled === 'true';
+        changes.push(`End-of-day nudge ${nudges.endOfDay.enabled ? 'enabled' : 'disabled'}`);
+      }
+      if (toolInput.endOfDay_time !== undefined) {
+        nudges.endOfDay.time = toolInput.endOfDay_time;
+        changes.push(`End-of-day nudge time set to ${toolInput.endOfDay_time}`);
+      }
+      if (toolInput.doNotDisturb !== undefined) {
+        nudges.doNotDisturb = toolInput.doNotDisturb === 'true';
+        changes.push(`Do Not Disturb ${nudges.doNotDisturb ? 'enabled' : 'disabled'}`);
+      }
+
+      settings.nudges = nudges;
+      saveSettings(settings);
+
+      return changes.length > 0
+        ? `Nudge settings updated:\n${changes.join('\n')}`
+        : 'No changes made — no fields were provided.';
+    }
     default:
       return `Unknown tool: ${toolName}`;
+  }
+}
+
+async function handleNudgeFire(type: NudgeType): Promise<void> {
+  devLog('nudge', 'firing nudge', { type });
+
+  try {
+    // 1. Get provider and API key
+    const settings = loadSettings();
+    const providerId = (settings.activeProvider || 'anthropic') as ProviderId;
+    const provider = await getProvider(providerId);
+
+    let apiKey: string | null = null;
+    try {
+      const keytar = require('keytar');
+      apiKey = await keytar.getPassword('nudge-app', `api-key-${providerId}`);
+    } catch {
+      apiKey = settings[`apiKey-${providerId}`] || null;
+    }
+    if (!apiKey) {
+      devLog('nudge', 'no API key configured, skipping nudge', { type });
+      return;
+    }
+
+    const baseUrl = settings[`baseUrl-${providerId}`] || undefined;
+    provider.configure(apiKey, baseUrl);
+    const model = settings[`model-${providerId}`] || (providerId === 'anthropic' ? 'claude-sonnet-4-5' : 'gpt-4o');
+
+    // 2. Create a new session
+    const { v4: uuidv4 } = require('uuid');
+    const prompt = NUDGE_PROMPTS[type];
+    const session = {
+      id: uuidv4(),
+      title: prompt.sessionTitle,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      messages: [] as any[],
+    };
+    ensureDir(sessionsDir);
+    const sessionPath = path.join(sessionsDir, `${session.id}.json`);
+
+    // 3. Build system prompt with nudge addendum
+    const bundledPath = path.join(
+      app.isPackaged
+        ? path.join(process.resourcesPath, 'app-bundle')
+        : path.join(__dirname, '../app-bundle'),
+      'system-prompt.md'
+    );
+    let baseSystemPrompt = fs.readFileSync(bundledPath, 'utf-8');
+
+    let config = '';
+    try {
+      const vaultPath = getVaultPath();
+      const configPath = path.resolve(vaultPath, 'config.md');
+      if (fs.existsSync(configPath)) {
+        config = fs.readFileSync(configPath, 'utf-8');
+      }
+    } catch {}
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const vaultPath = getVaultPath();
+
+    const systemPrompt = `${baseSystemPrompt}\n\n---\n\n## User Config\n\n${config}\n\n---\n\n## Current Date & Time\n\n${dateStr} at ${timeStr}\n\nVault location: ${vaultPath}${prompt.addendum}`;
+
+    // 4. Create trigger message
+    const triggerMessage = {
+      id: uuidv4(),
+      role: 'user' as const,
+      content: '[Nudge triggered]',
+      timestamp: Date.now(),
+    };
+    session.messages.push(triggerMessage);
+
+    // 5. Run agentic loop
+    const { fullText } = await runAgenticLoop({
+      provider,
+      messages: [triggerMessage],
+      systemPrompt,
+      model,
+      tools: VAULT_TOOLS,
+      processToolCall,
+    });
+
+    // 6. Save assistant response to session
+    const assistantMessage = {
+      id: uuidv4(),
+      role: 'assistant' as const,
+      content: fullText,
+      timestamp: Date.now(),
+    };
+    session.messages.push(assistantMessage);
+    session.updatedAt = Date.now();
+    fs.writeFileSync(sessionPath, JSON.stringify(session, null, 2));
+
+    // 7. Show OS notification
+    const notificationBody = fullText.length > 200 ? fullText.slice(0, 197) + '...' : fullText;
+    const notification = new Notification({
+      title: prompt.title,
+      body: notificationBody,
+    });
+
+    notification.on('click', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+        mainWindow.webContents.send('nudge:navigate', { sessionId: session.id });
+      }
+    });
+
+    notification.show();
+
+    // 8. Notify renderer
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('nudge:fired', { sessionId: session.id, type });
+    }
+
+    devLog('nudge', 'nudge delivered', { type, sessionId: session.id, textLength: fullText.length });
+  } catch (error: any) {
+    devLog('nudge', 'nudge failed', { type, error: formatError(error) });
   }
 }
 
@@ -873,6 +1036,21 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+
+  // Start nudge scheduler
+  const nudgeScheduler = new NudgeScheduler(
+    () => {
+      const settings = loadSettings();
+      return { ...DEFAULT_NUDGE_SETTINGS, ...settings.nudges };
+    },
+    (nudgeSettings: NudgeSettings) => {
+      const settings = loadSettings();
+      settings.nudges = nudgeSettings;
+      saveSettings(settings);
+    },
+    (type: NudgeType) => { handleNudgeFire(type); },
+  );
+  nudgeScheduler.start();
 
   // Auto-check for updates on startup (packaged builds only)
   if (app.isPackaged) {
