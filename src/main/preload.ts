@@ -238,4 +238,16 @@ contextBridge.exposeInMainWorld('nudge', {
       return () => { ipcRenderer.removeListener('updater:status-changed', handler); };
     },
   },
+  nudges: {
+    onFired: (callback: (data: { sessionId: string; type: string }) => void) => {
+      const handler = (_event: any, data: { sessionId: string; type: string }) => callback(data);
+      ipcRenderer.on('nudge:fired', handler);
+      return () => { ipcRenderer.removeListener('nudge:fired', handler); };
+    },
+    onNavigate: (callback: (data: { sessionId: string }) => void) => {
+      const handler = (_event: any, data: { sessionId: string }) => callback(data);
+      ipcRenderer.on('nudge:navigate', handler);
+      return () => { ipcRenderer.removeListener('nudge:navigate', handler); };
+    },
+  },
 });
