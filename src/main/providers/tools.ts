@@ -83,4 +83,21 @@ export const VAULT_TOOLS: NeutralToolDef[] = [
       required: ['date'],
     },
   },
+  {
+    name: 'update_nudge_settings',
+    description: 'Update nudge notification settings. Use when the user wants to change nudge times, enable/disable nudges, or toggle Do Not Disturb. Partial updates — only provided fields are changed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        morning_enabled: { type: 'string', description: 'Set morning nudge enabled: "true" or "false"' },
+        morning_time: { type: 'string', description: 'Set morning nudge time in HH:MM 24-hour format (e.g., "09:00")' },
+        midday_enabled: { type: 'string', description: 'Set mid-day nudge enabled: "true" or "false"' },
+        midday_time: { type: 'string', description: 'Set mid-day nudge time in HH:MM 24-hour format (e.g., "11:00")' },
+        endOfDay_enabled: { type: 'string', description: 'Set end-of-day nudge enabled: "true" or "false"' },
+        endOfDay_time: { type: 'string', description: 'Set end-of-day nudge time in HH:MM 24-hour format (e.g., "15:00")' },
+        doNotDisturb: { type: 'string', description: 'Set Do Not Disturb: "true" or "false". When enabled, suppresses all nudges until auto-reset at end-of-day time.' },
+      },
+      required: [],
+    },
+  },
 ];
