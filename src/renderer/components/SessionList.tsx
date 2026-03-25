@@ -58,8 +58,11 @@ export default function SessionList({ currentSessionId, onSelectSession, onNewCh
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  // Filter out empty sessions (no messages ever sent)
+  const nonEmpty = sessions.filter(s => (s.messageCount ?? 0) > 0);
+
   // Sort: starred first, then by updatedAt
-  const sorted = [...sessions].sort((a, b) => {
+  const sorted = [...nonEmpty].sort((a, b) => {
     if (a.starred && !b.starred) return -1;
     if (!a.starred && b.starred) return 1;
     return b.updatedAt - a.updatedAt;

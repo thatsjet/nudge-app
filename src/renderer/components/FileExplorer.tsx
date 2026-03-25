@@ -488,13 +488,25 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
   if (embedded) {
     return (
       <div className="file-explorer file-explorer--embedded">
-        <div className="file-explorer-tree">
+        <div className="fe-body">
           {loading ? (
-            <div className="file-explorer-empty">Loading...</div>
+            <div className="fe-empty">Loading...</div>
           ) : entries.length > 0 ? (
-            entries.map(renderEntry)
+            <>
+              {sectionEntries.map(({ def, entry }) => renderSection(def, entry))}
+              {otherEntries.length > 0 && (
+                <div className="fe-section fe-section--other">
+                  <div className="fe-section-divider" />
+                  {otherEntries.map(entry =>
+                    entry.isDirectory
+                      ? renderSubdirEntry(entry)
+                      : renderFileItem(entry, editingFile === entry.path)
+                  )}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="file-explorer-empty">No files found</div>
+            <div className="fe-empty">No files found</div>
           )}
         </div>
         {contextMenu && (
