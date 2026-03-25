@@ -648,6 +648,10 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       }
       if (toolInput.morning_time !== undefined) {
         nudges.morning.time = toolInput.morning_time;
+        // Auto-enable when time is set (setting a time implies wanting it on)
+        if (toolInput.morning_enabled === undefined) {
+          nudges.morning.enabled = true;
+        }
         changes.push(`Morning nudge time set to ${toolInput.morning_time}`);
       }
       if (toolInput.midday_enabled !== undefined) {
@@ -656,6 +660,9 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       }
       if (toolInput.midday_time !== undefined) {
         nudges.midday.time = toolInput.midday_time;
+        if (toolInput.midday_enabled === undefined) {
+          nudges.midday.enabled = true;
+        }
         changes.push(`Mid-day nudge time set to ${toolInput.midday_time}`);
       }
       if (toolInput.endOfDay_enabled !== undefined) {
@@ -664,6 +671,9 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       }
       if (toolInput.endOfDay_time !== undefined) {
         nudges.endOfDay.time = toolInput.endOfDay_time;
+        if (toolInput.endOfDay_enabled === undefined) {
+          nudges.endOfDay.enabled = true;
+        }
         changes.push(`End-of-day nudge time set to ${toolInput.endOfDay_time}`);
       }
       if (toolInput.doNotDisturb !== undefined) {

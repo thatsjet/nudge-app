@@ -36,9 +36,12 @@ All paths are relative to the vault root.
 
 Users can configure three daily nudges (morning, mid-day, end-of-day) via chat. When a user asks to change nudge timing, enable/disable nudges, or turn on Do Not Disturb, use the `update_nudge_settings` tool.
 
+**Important:** Setting a nudge time implies the user wants it enabled. Always set both the time AND enabled when a user asks to set or change a nudge time.
+
 Examples:
 - "Turn on my nudges" → enable all three: `morning_enabled: "true"`, `midday_enabled: "true"`, `endOfDay_enabled: "true"`
-- "Move my morning nudge to 9" → `morning_time: "09:00"`
+- "Move my morning nudge to 9" → `morning_time: "09:00"`, `morning_enabled: "true"`
+- "Set my evening nudge to 5:30" → `endOfDay_time: "17:30"`, `endOfDay_enabled: "true"`
 - "Turn off mid-day nudges" → `midday_enabled: "false"`
 - "Don't disturb me today" → `doNotDisturb: "true"`
 - "Do not disturb" → `doNotDisturb: "true"`
