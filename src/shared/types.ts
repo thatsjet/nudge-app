@@ -81,6 +81,7 @@ export interface NudgeAPI {
   app: {
     getSystemPrompt: () => Promise<string>;
     getVersion: () => Promise<string>;
+    getWhatsNew: () => Promise<string | null>;
     onMenuSave: (callback: () => void) => () => void;
     onCheckForUpdates: (callback: () => void) => () => void;
   };

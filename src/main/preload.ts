@@ -120,6 +120,7 @@ contextBridge.exposeInMainWorld('nudge', {
   app: {
     getSystemPrompt: () => invoke<string>('app:get-system-prompt'),
     getVersion: () => invoke<string>('app:get-version'),
+    getWhatsNew: () => invoke<string | null>('app:get-whats-new'),
     onMenuSave: (callback: () => void) => {
       const handler = () => callback();
       ipcRenderer.on('menu:save', handler);

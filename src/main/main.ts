@@ -332,6 +332,17 @@ ipcMain.handle('app:get-version', () => {
   return app.getVersion();
 });
 
+ipcMain.handle('app:get-whats-new', async () => {
+  const bundledPath = path.join(
+    app.isPackaged
+      ? path.join(process.resourcesPath, 'app-bundle')
+      : path.join(__dirname, '../app-bundle'),
+    'whats-new.md'
+  );
+  if (!fs.existsSync(bundledPath)) return null;
+  return fs.readFileSync(bundledPath, 'utf-8');
+});
+
 ipcMain.handle('updater:check', async () => {
   if (!app.isPackaged) {
     setUpdateStatus({ state: 'checking' });

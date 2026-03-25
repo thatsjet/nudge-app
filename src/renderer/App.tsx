@@ -38,6 +38,7 @@ export default function App() {
 
       if (complete) {
         await resumeOrStartSession();
+        await checkWhatsNew();
       }
     }
     init();
@@ -108,6 +109,33 @@ export default function App() {
     } else {
       document.documentElement.setAttribute('data-theme', t);
     }
+  }
+
+  async function checkWhatsNew() {
+    try {
+      const currentVersion = await window.nudge.app.getVersion();
+      const lastSeenVersion = await window.nudge.settings.get('lastSeenVersion');
+      if (lastSeenVersion === currentVersion) return;
+
+      const whatsNew = await window.nudge.app.getWhatsNew();
+      if (!whatsNew) {
+        await window.nudge.settings.set('lastSeenVersion', currentVersion);
+        return;
+      }
+
+      // Inject as an assistant message in the current session
+      const message: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: whatsNew,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, message]);
+      if (currentSessionId) {
+        await window.nudge.sessions.addMessage(currentSessionId, message);
+      }
+      await window.nudge.settings.set('lastSeenVersion', currentVersion);
+    } catch {}
   }
 
   async function startNewSession() {
