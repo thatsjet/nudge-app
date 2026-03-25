@@ -786,12 +786,12 @@ nudge-app/
 These are things Nudge intentionally does NOT do:
 
 - **Not a full project manager** — No Gantt charts, no dependencies, no sprints, no Kanban boards
-- **Not a calendar** — No scheduling, no reminders, no notifications, no alarms
+- **Not a calendar** — No scheduling, no reminders, no alarms. Nudge offers optional soft nudges (see below), but it is not a calendar or reminder system.
 - **Not a note-taking app** — Ideas have structure. This isn't a freeform notebook or wiki.
 - **Not a team tool** — Single user only. No sharing, collaboration, or multi-user features.
 - **Not a habit tracker** — Recurring items exist but there are no streaks, scores, or tracking graphs
 - **No gamification** — No points, no levels, no achievements, no streaks. These create pressure, not momentum.
-- **No notifications or alerts** — The user opens Nudge when they're ready. Nudge does not interrupt them. Ever.
+- **Gentle nudges, not aggressive alerts** — Nudge offers optional, scheduled soft nudges (morning, mid-day, end-of-day) to help users remember to check in. These are off by default, chat-configurable, and designed to be warm and low-pressure — not urgent or guilt-inducing. A Do Not Disturb mode suppresses all nudges instantly. The app is only helpful if users remember to open it, and periodic gentle nudges solve this without creating pressure.
 - **No AI memory across sessions beyond vault files** — The AI's "memory" is the vault. There is no separate memory store or learned behavior. This keeps things transparent and user-controllable.
 
 ---
