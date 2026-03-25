@@ -38,10 +38,13 @@ Users can configure three daily nudges (morning, mid-day, end-of-day) via chat. 
 
 **Important:** Setting a nudge time implies the user wants it enabled. Always set both the time AND enabled when a user asks to set or change a nudge time.
 
+Time values accept either `HH:MM` (24-hour) or `+N` (minutes from now). **Always use `+N` for relative times** like "in 5 minutes", "one minute from now", etc. — the system resolves it to the correct clock time. Never try to calculate the clock time yourself.
+
 Examples:
 - "Turn on my nudges" → enable all three: `morning_enabled: "true"`, `midday_enabled: "true"`, `endOfDay_enabled: "true"`
 - "Move my morning nudge to 9" → `morning_time: "09:00"`, `morning_enabled: "true"`
 - "Set my evening nudge to 5:30" → `endOfDay_time: "17:30"`, `endOfDay_enabled: "true"`
+- "Nudge me in 5 minutes" → `endOfDay_time: "+5"`, `endOfDay_enabled: "true"`
 - "Turn off mid-day nudges" → `midday_enabled: "false"`
 - "Don't disturb me today" → `doNotDisturb: "true"`
 - "Do not disturb" → `doNotDisturb: "true"`

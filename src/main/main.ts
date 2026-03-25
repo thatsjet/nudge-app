@@ -642,39 +642,50 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
       const nudges: NudgeSettings = { ...DEFAULT_NUDGE_SETTINGS, ...settings.nudges };
       const changes: string[] = [];
 
+      // Resolve time values — supports "+N" (minutes from now) or "HH:MM"
+      function resolveTime(value: string): string {
+        const relativeMatch = value.match(/^\+(\d+)$/);
+        if (relativeMatch) {
+          const minutes = parseInt(relativeMatch[1], 10);
+          const target = new Date(Date.now() + minutes * 60_000);
+          return `${String(target.getHours()).padStart(2, '0')}:${String(target.getMinutes()).padStart(2, '0')}`;
+        }
+        return value;
+      }
+
       if (toolInput.morning_enabled !== undefined) {
         nudges.morning.enabled = toolInput.morning_enabled === 'true';
         changes.push(`Morning nudge ${nudges.morning.enabled ? 'enabled' : 'disabled'}`);
       }
       if (toolInput.morning_time !== undefined) {
-        nudges.morning.time = toolInput.morning_time;
+        nudges.morning.time = resolveTime(toolInput.morning_time);
         // Auto-enable when time is set (setting a time implies wanting it on)
         if (toolInput.morning_enabled === undefined) {
           nudges.morning.enabled = true;
         }
-        changes.push(`Morning nudge time set to ${toolInput.morning_time}`);
+        changes.push(`Morning nudge time set to ${nudges.morning.time}`);
       }
       if (toolInput.midday_enabled !== undefined) {
         nudges.midday.enabled = toolInput.midday_enabled === 'true';
         changes.push(`Mid-day nudge ${nudges.midday.enabled ? 'enabled' : 'disabled'}`);
       }
       if (toolInput.midday_time !== undefined) {
-        nudges.midday.time = toolInput.midday_time;
+        nudges.midday.time = resolveTime(toolInput.midday_time);
         if (toolInput.midday_enabled === undefined) {
           nudges.midday.enabled = true;
         }
-        changes.push(`Mid-day nudge time set to ${toolInput.midday_time}`);
+        changes.push(`Mid-day nudge time set to ${nudges.midday.time}`);
       }
       if (toolInput.endOfDay_enabled !== undefined) {
         nudges.endOfDay.enabled = toolInput.endOfDay_enabled === 'true';
         changes.push(`End-of-day nudge ${nudges.endOfDay.enabled ? 'enabled' : 'disabled'}`);
       }
       if (toolInput.endOfDay_time !== undefined) {
-        nudges.endOfDay.time = toolInput.endOfDay_time;
+        nudges.endOfDay.time = resolveTime(toolInput.endOfDay_time);
         if (toolInput.endOfDay_enabled === undefined) {
           nudges.endOfDay.enabled = true;
         }
-        changes.push(`End-of-day nudge time set to ${toolInput.endOfDay_time}`);
+        changes.push(`End-of-day nudge time set to ${nudges.endOfDay.time}`);
       }
       if (toolInput.doNotDisturb !== undefined) {
         nudges.doNotDisturb = toolInput.doNotDisturb === 'true';
