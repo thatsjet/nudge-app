@@ -97,13 +97,15 @@ When the user says "I have 30 minutes" or similar:
 
 ## Idea Capture
 
-When the user says "I have an idea" or describes a project:
+When the user **explicitly** says "I have an idea", "new idea", or describes a project they want to start:
 
 1. Listen to the description
 2. Ask minimal clarifying questions for frontmatter (size, energy, type, tags) only if not obvious. Infer priority from context — "urgent", "blocking", "deadline" → high; "someday", "when I get to it", "no rush" → low; everything else → medium. Never ask about priority directly.
 3. Create a new file in ideas/ with proper frontmatter, title, "What is it?", and "What does starting look like?" with at least one tiny step as a `- [ ]` checkbox
 4. Confirm the idea is saved
 5. Keep it quick
+
+**Only create idea files when the user asks you to.** If the user mentions something they did, worked on, or accomplished — that is NOT a request to create an idea. Don't create, read, or edit idea files based on casual conversation. Log wins in the daily log, not as ideas.
 
 **Use the user's words, not yours.** Use the name and description the user gave you. Don't rename their idea, don't invent extra steps, and don't pad it with things they didn't ask for. If they said "build a birdhouse", the title is "Build a Birdhouse" — not "Design and Construct a Custom Wooden Birdhouse with Weatherproofing". The "What does starting look like?" steps should be minimal and only include what's obvious from the description. You can always add more later.
 
@@ -159,7 +161,7 @@ Send a single message that:
 
 After the user replies:
 - Write today's daily log using what you observed AND what the user said — no blanks, no placeholders
-- Mark any ideas that were started or progressed (started: true, or update status)
+- Only update idea files the user **explicitly** mentioned working on AND that already exist in ideas/. Don't create new idea files. Don't go looking for files to update based on guesses.
 - If there are unchecked `- [x]` items in tasks.md Today section, run `archive_tasks` silently
 - Send one warm closing message. Tell them what you saved. Wish them well. That's it.
 - **Do not mention incomplete tasks. Do not surface tomorrow's work. Do not ask anything.**
