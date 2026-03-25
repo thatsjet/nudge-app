@@ -49,11 +49,14 @@ export class NudgeScheduler {
     private getSettings: () => NudgeSettings,
     private saveSettings: (settings: NudgeSettings) => void,
     private onNudgeFire: (type: NudgeType) => void,
+    private log?: (message: string, payload?: any) => void,
   ) {}
 
   start(): void {
     if (this.intervalId) return;
     this.lastDateString = this.todayString();
+    // Run first tick immediately, then every 60 seconds
+    this.tick();
     this.intervalId = setInterval(() => this.tick(), 60_000);
   }
 
@@ -86,6 +89,15 @@ export class NudgeScheduler {
 
     const settings = this.getSettings();
 
+    this.log?.('tick', {
+      currentTime,
+      dnd: settings.doNotDisturb,
+      morning: `${settings.morning.enabled ? 'on' : 'off'}@${settings.morning.time}`,
+      midday: `${settings.midday.enabled ? 'on' : 'off'}@${settings.midday.time}`,
+      endOfDay: `${settings.endOfDay.enabled ? 'on' : 'off'}@${settings.endOfDay.time}`,
+      firedToday: [...this.firedToday],
+    });
+
     // Auto-reset DnD at end-of-day time (or midnight if EOD disabled)
     if (settings.doNotDisturb) {
       const resetTime = settings.endOfDay.enabled ? settings.endOfDay.time : '00:00';
@@ -100,6 +112,7 @@ export class NudgeScheduler {
     for (const type of NUDGE_TYPES) {
       const config = settings[type];
       if (config.enabled && !this.firedToday.has(type) && currentTime === config.time) {
+        this.log?.('firing', { type, time: config.time });
         this.firedToday.add(type);
         this.onNudgeFire(type);
       }

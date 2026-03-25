@@ -1059,6 +1059,7 @@ app.whenReady().then(async () => {
       saveSettings(settings);
     },
     (type: NudgeType) => { handleNudgeFire(type); },
+    (message: string, payload?: any) => { devLog('nudge-scheduler', message, payload); },
   );
   nudgeScheduler.start();
 
