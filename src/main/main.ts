@@ -522,6 +522,7 @@ ipcMain.handle('sessions:delete', async (_event, sessionId: string) => {
 
 // Process tool calls (provider-agnostic — works with any LLM)
 async function processToolCall(toolName: string, toolInput: Record<string, string>): Promise<string> {
+  try {
   const vaultPath = getVaultPath();
 
   switch (toolName) {
@@ -701,6 +702,9 @@ async function processToolCall(toolName: string, toolInput: Record<string, strin
     }
     default:
       return `Unknown tool: ${toolName}`;
+  }
+  } catch (error: any) {
+    return `Error in ${toolName}: ${error?.message || String(error)}`;
   }
 }
 
