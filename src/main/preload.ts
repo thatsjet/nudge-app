@@ -120,6 +120,7 @@ contextBridge.exposeInMainWorld('nudge', {
   app: {
     getSystemPrompt: () => invoke<string>('app:get-system-prompt'),
     getVersion: () => invoke<string>('app:get-version'),
+    getWhatsNew: () => invoke<string | null>('app:get-whats-new'),
     onMenuSave: (callback: () => void) => {
       const handler = () => callback();
       ipcRenderer.on('menu:save', handler);
@@ -224,6 +225,8 @@ contextBridge.exposeInMainWorld('nudge', {
     get: (id: string) => invoke('sessions:get', id),
     create: () => invoke('sessions:create'),
     addMessage: (sessionId: string, message: any) => invoke('sessions:add-message', sessionId, message),
+    update: (sessionId: string, updates: any) => invoke('sessions:update', sessionId, updates),
+    delete: (sessionId: string) => invoke('sessions:delete', sessionId),
   },
   updater: {
     checkForUpdates: () => invoke<void>('updater:check'),
@@ -234,6 +237,18 @@ contextBridge.exposeInMainWorld('nudge', {
       const handler = (_event: any, status: any) => callback(status);
       ipcRenderer.on('updater:status-changed', handler);
       return () => { ipcRenderer.removeListener('updater:status-changed', handler); };
+    },
+  },
+  nudges: {
+    onFired: (callback: (data: { sessionId: string; type: string }) => void) => {
+      const handler = (_event: any, data: { sessionId: string; type: string }) => callback(data);
+      ipcRenderer.on('nudge:fired', handler);
+      return () => { ipcRenderer.removeListener('nudge:fired', handler); };
+    },
+    onNavigate: (callback: (data: { sessionId: string }) => void) => {
+      const handler = (_event: any, data: { sessionId: string }) => callback(data);
+      ipcRenderer.on('nudge:navigate', handler);
+      return () => { ipcRenderer.removeListener('nudge:navigate', handler); };
     },
   },
 });

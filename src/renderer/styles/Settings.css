@@ -28,7 +28,7 @@
 }
 
 .settings-title {
-  font-size: 16px;
+  font-size: var(--text-md);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -41,7 +41,7 @@
   height: 28px;
   border-radius: 6px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--text-base);
   transition: background 150ms ease, color 150ms ease;
 }
 
@@ -66,14 +66,14 @@
 
 .settings-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .settings-description {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   margin-bottom: 8px;
 }
@@ -90,13 +90,17 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   outline: none;
   transition: border-color 150ms ease;
 }
 
 .settings-input:focus {
   border-color: var(--accent);
+}
+
+.settings-input:focus-visible {
+  outline: none;
 }
 
 .settings-input--readonly {
@@ -108,7 +112,7 @@
 .settings-btn {
   padding: 8px 14px;
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   transition: background 150ms ease, color 150ms ease;
 }
@@ -133,7 +137,7 @@
 
 .settings-btn--small {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .settings-select {
@@ -143,7 +147,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   outline: none;
   cursor: pointer;
   transition: border-color 150ms ease;
@@ -151,6 +155,10 @@
 
 .settings-select:focus {
   border-color: var(--accent);
+}
+
+.settings-select:focus-visible {
+  outline: none;
 }
 
 .settings-provider-tabs {
@@ -163,7 +171,7 @@
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-input);
   transition: all 150ms ease;
@@ -190,7 +198,7 @@
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-input);
   transition: all 150ms ease;
@@ -209,7 +217,7 @@
 
 .settings-feedback {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--text-xs);
   padding: 6px 10px;
   border-radius: 6px;
 }
@@ -225,7 +233,7 @@
 }
 
 .settings-about {
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   line-height: 1.6;
 }
@@ -241,7 +249,7 @@
   align-items: center;
   gap: 8px;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
@@ -264,7 +272,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-primary);
 }
 

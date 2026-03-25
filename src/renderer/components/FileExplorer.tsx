@@ -7,12 +7,14 @@ interface FileExplorerProps {
   onClose: () => void;
   onFileSelect: (path: string | null) => void;
   editingFile?: string | null;
+  embedded?: boolean;
 }
 
 interface TreeEntry {
   name: string;
   path: string;
   isDirectory: boolean;
+  lastModified?: number;
   children?: TreeEntry[];
   expanded?: boolean;
   loaded?: boolean;
@@ -25,13 +27,40 @@ interface ContextMenuState {
   fileName: string;
 }
 
-export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFile }: FileExplorerProps) {
+// Known vault sections with display labels and icons
+const SECTIONS: { key: string; label: string; icon: string }[] = [
+  { key: 'ideas', label: 'Ideas', icon: '\u{1F4A1}' },
+  { key: 'daily', label: 'Daily', icon: '\u{1F4C5}' },
+  { key: 'tasks', label: 'Tasks', icon: '\u{2705}' },
+];
+const SECTION_KEYS = new Set(SECTIONS.map(s => s.key));
+
+function formatRelativeDate(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const date = new Date(timestamp);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function cleanFileName(name: string): string {
+  return name.replace(/\.md$/, '').replace(/[-_]/g, ' ');
+}
+
+export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFile, embedded }: FileExplorerProps) {
   const [entries, setEntries] = useState<TreeEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [priorities, setPriorities] = useState<Record<string, string>>({});
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(SECTION_KEYS));
   const renameInputRef = useRef<HTMLInputElement>(null);
   const entriesRef = useRef<TreeEntry[]>([]);
 
@@ -54,6 +83,7 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
           name: f.name,
           path: f.path,
           isDirectory: f.isDirectory,
+          lastModified: f.lastModified,
           children: [],
           expanded: false,
           loaded: false,
@@ -115,10 +145,29 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     setLoading(true);
     const expandedPaths = getExpandedPaths(entriesRef.current);
     const root = await loadDirectory('');
-    const restored = expandedPaths.size > 0 ? await restoreExpanded(root, expandedPaths) : root;
-    setEntries(restored);
+
+    // Auto-expand section directories and load their children
+    const withSections = await Promise.all(root.map(async (entry) => {
+      if (entry.isDirectory && SECTION_KEYS.has(entry.name)) {
+        if (expandedPaths.has(entry.path) || !entry.loaded) {
+          const children = await loadDirectory(entry.path);
+          const restoredChildren = expandedPaths.size > 0
+            ? await restoreExpanded(children, expandedPaths)
+            : children;
+          return { ...entry, children: restoredChildren, loaded: true, expanded: true };
+        }
+      }
+      if (expandedPaths.has(entry.path)) {
+        const children = await loadDirectory(entry.path);
+        const restoredChildren = await restoreExpanded(children, expandedPaths);
+        return { ...entry, children: restoredChildren, loaded: true, expanded: true };
+      }
+      return entry;
+    }));
+
+    setEntries(withSections);
     setLoading(false);
-    loadPriorities(restored).catch(() => {});
+    loadPriorities(withSections).catch(() => {});
   }, [loadDirectory, loadPriorities, getExpandedPaths, restoreExpanded]);
 
   useEffect(() => {
@@ -141,7 +190,6 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     if (renamingPath && renameInputRef.current) {
       const input = renameInputRef.current;
       input.focus();
-      // Select name without extension
       const dotIndex = renameValue.lastIndexOf('.');
       if (dotIndex > 0) {
         input.setSelectionRange(0, dotIndex);
@@ -216,7 +264,6 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     if (newPath !== renamingPath) {
       try {
         await window.nudge.vault.moveFile(renamingPath, newPath);
-        // If the renamed file was being edited, update the editor
         if (editingFile === renamingPath) {
           onFileSelect(newPath);
         }
@@ -312,24 +359,29 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
     return items;
   };
 
-  const renderEntry = (entry: TreeEntry) => (
-    <div key={entry.path}>
-      <div
-        className={`file-explorer-item ${entry.isDirectory ? 'file-explorer-item--dir' : ''}`}
-        onClick={() => {
-          if (renamingPath === entry.path) return;
-          handleClick(entry);
-        }}
-        onContextMenu={(e) => handleContextMenu(e, entry)}
-      >
-        {entry.isDirectory && (
-          <span className={`file-explorer-chevron ${entry.expanded ? 'file-explorer-chevron--open' : ''}`}>
-            &#9654;
-          </span>
-        )}
-        <span className="file-explorer-icon">
-          {entry.isDirectory ? '\uD83D\uDCC1' : '\uD83D\uDCC4'}
-        </span>
+  const toggleSection = (sectionKey: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionKey)) {
+        next.delete(sectionKey);
+      } else {
+        next.add(sectionKey);
+      }
+      return next;
+    });
+  };
+
+  const renderFileItem = (entry: TreeEntry, isActive: boolean) => (
+    <div
+      key={entry.path}
+      className={`fe-file-item ${isActive ? 'fe-file-item--active' : ''}`}
+      onClick={() => {
+        if (renamingPath === entry.path) return;
+        handleClick(entry);
+      }}
+      onContextMenu={(e) => handleContextMenu(e, entry)}
+    >
+      <div className="fe-file-main">
         {renamingPath === entry.path ? (
           <input
             ref={renameInputRef}
@@ -337,55 +389,170 @@ export default function FileExplorer({ isOpen, onClose, onFileSelect, editingFil
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                confirmRename();
-              } else if (e.key === 'Escape') {
-                cancelRename();
-              }
+              if (e.key === 'Enter') confirmRename();
+              else if (e.key === 'Escape') cancelRename();
             }}
             onBlur={confirmRename}
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="file-explorer-name">{entry.name}</span>
-        )}
-        {priorities[entry.path] && (
-          <span className={`file-explorer-priority file-explorer-priority--${priorities[entry.path]}`} />
+          <>
+            <span className="fe-file-name">{cleanFileName(entry.name)}</span>
+            {priorities[entry.path] && (
+              <span className={`fe-priority fe-priority--${priorities[entry.path]}`} />
+            )}
+          </>
         )}
       </div>
-      {entry.isDirectory && entry.expanded && entry.children && (
-        <div className="file-explorer-children">
+      {entry.lastModified && renamingPath !== entry.path && (
+        <span className="fe-file-meta">{formatRelativeDate(entry.lastModified)}</span>
+      )}
+    </div>
+  );
+
+  const renderSubdirEntry = (entry: TreeEntry) => (
+    <div key={entry.path}>
+      <div
+        className="fe-subdir-item"
+        onClick={() => toggleDirectory(entry)}
+      >
+        <span className={`fe-subdir-chevron ${entry.expanded ? 'fe-subdir-chevron--open' : ''}`}>
+          &#9654;
+        </span>
+        <span className="fe-subdir-name">{entry.name}</span>
+      </div>
+      {entry.expanded && entry.children && (
+        <div className="fe-subdir-children">
           {entry.children.length > 0
-            ? entry.children.map(renderEntry)
-            : <div className="file-explorer-empty">Empty folder</div>
+            ? entry.children.map(child =>
+                child.isDirectory
+                  ? renderSubdirEntry(child)
+                  : renderFileItem(child, editingFile === child.path)
+              )
+            : <div className="fe-empty">Empty</div>
           }
         </div>
       )}
     </div>
   );
 
+  const renderSection = (sectionDef: { key: string; label: string; icon: string }, sectionEntry: TreeEntry) => {
+    const isExpanded = expandedSections.has(sectionDef.key);
+    const children = sectionEntry.children || [];
+    const fileCount = children.filter(c => !c.isDirectory).length;
+
+    return (
+      <div key={sectionDef.key} className="fe-section">
+        <div
+          className="fe-section-header"
+          onClick={() => toggleSection(sectionDef.key)}
+        >
+          <span className={`fe-section-chevron ${isExpanded ? 'fe-section-chevron--open' : ''}`}>
+            &#9654;
+          </span>
+          <span className="fe-section-icon">{sectionDef.icon}</span>
+          <span className="fe-section-label">{sectionDef.label}</span>
+          <span className="fe-section-count">{fileCount}</span>
+        </div>
+        {isExpanded && (
+          <div className="fe-section-content">
+            {children.length > 0 ? (
+              children.map(child =>
+                child.isDirectory
+                  ? renderSubdirEntry(child)
+                  : renderFileItem(child, editingFile === child.path)
+              )
+            ) : (
+              <div className="fe-empty">No files yet</div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Separate entries into known sections and "other"
+  const sectionEntries: { def: typeof SECTIONS[0]; entry: TreeEntry }[] = [];
+  const otherEntries: TreeEntry[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory && SECTION_KEYS.has(entry.name)) {
+      const def = SECTIONS.find(s => s.key === entry.name)!;
+      sectionEntries.push({ def, entry });
+    } else {
+      otherEntries.push(entry);
+    }
+  }
+
   if (!isOpen) return null;
+
+  if (embedded) {
+    return (
+      <div className="file-explorer file-explorer--embedded">
+        <div className="fe-body">
+          {loading ? (
+            <div className="fe-empty">Loading...</div>
+          ) : entries.length > 0 ? (
+            <>
+              {sectionEntries.map(({ def, entry }) => renderSection(def, entry))}
+              {otherEntries.length > 0 && (
+                <div className="fe-section fe-section--other">
+                  <div className="fe-section-divider" />
+                  {otherEntries.map(entry =>
+                    entry.isDirectory
+                      ? renderSubdirEntry(entry)
+                      : renderFileItem(entry, editingFile === entry.path)
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="fe-empty">No files found</div>
+          )}
+        </div>
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={buildContextMenuItems()}
+            onClose={closeContextMenu}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="file-explorer">
-      <div className="file-explorer-header">
-        <span className="file-explorer-header-title">Vault</span>
-        <div className="file-explorer-header-actions">
-          <button className="file-explorer-btn" onClick={loadRoot} title="Refresh">
+      <div className="fe-header">
+        <span className="fe-header-title">Vault</span>
+        <div className="fe-header-actions">
+          <button className="fe-btn" onClick={loadRoot} title="Refresh">
             &#8635;
           </button>
-          <button className="file-explorer-btn" onClick={onClose} title="Close">
+          <button className="fe-btn" onClick={onClose} title="Close">
             &#10005;
           </button>
         </div>
       </div>
-      <div className="file-explorer-tree">
+      <div className="fe-body">
         {loading ? (
-          <div className="file-explorer-empty">Loading...</div>
+          <div className="fe-empty">Loading...</div>
         ) : entries.length > 0 ? (
-          entries.map(renderEntry)
+          <>
+            {sectionEntries.map(({ def, entry }) => renderSection(def, entry))}
+            {otherEntries.length > 0 && (
+              <div className="fe-section fe-section--other">
+                <div className="fe-section-divider" />
+                {otherEntries.map(entry =>
+                  entry.isDirectory
+                    ? renderSubdirEntry(entry)
+                    : renderFileItem(entry, editingFile === entry.path)
+                )}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="file-explorer-empty">No files found</div>
+          <div className="fe-empty">No files found</div>
         )}
       </div>
       {contextMenu && (

@@ -35,25 +35,17 @@ type Step =
   | 'welcome'
   | 'provider'
   | 'apiKey'
-  | 'vault'
-  | 'aboutMe'
-  | 'energy'
-  | 'preferences'
+  | 'aboutYou'
   | 'focus'
-  | 'mantra'
-  | 'ready';
+  | 'mantra';
 
 const STEPS: Step[] = [
   'welcome',
   'provider',
   'apiKey',
-  'vault',
-  'aboutMe',
-  'energy',
-  'preferences',
+  'aboutYou',
   'focus',
   'mantra',
-  'ready',
 ];
 
 const PROVIDER_OPTIONS: { id: ProviderId; name: string; description: string }[] = [
@@ -109,7 +101,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [showKey, setShowKey] = useState(false);
   const [validating, setValidating] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [initializing, setInitializing] = useState(false);
 
   // Profile wizard state
   const [aboutMe, setAboutMe] = useState('');
@@ -120,6 +111,16 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [suggestionStyle, setSuggestionStyle] = useState('');
   const [focusAreas, setFocusAreas] = useState('');
   const [mantra, setMantra] = useState('Starting is success, completion is optional.');
+
+  // Collapsible sections for "About You" step
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    about: true,
+    energy: false,
+    preferences: false,
+  });
+
+  // Toast state
+  const [showToast, setShowToast] = useState(false);
 
   const currentIndex = STEPS.indexOf(step);
 
@@ -135,6 +136,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     if (prevIndex >= 0) {
       setStep(STEPS[prevIndex]);
     }
+  }
+
+  function toggleSection(section: string) {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   }
 
   const handleValidateKey = async () => {
@@ -155,7 +160,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           await window.nudge.settings.setProviderBaseUrl(selectedProvider, baseUrl);
         }
         setFeedback({ type: 'success', message: 'Key validated successfully.' });
-        setTimeout(() => setStep('vault'), 800);
+        // Auto-initialize vault with default path, then advance
+        try {
+          const currentPath = await window.nudge.vault.getPath();
+          await window.nudge.vault.initialize(currentPath);
+        } catch {
+          // Non-blocking — vault setup is best-effort
+        }
+        setTimeout(() => setStep('aboutYou'), 800);
       } else {
         setFeedback({ type: 'error', message: 'Invalid API key. Please check and try again.' });
       }
@@ -163,19 +175,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setFeedback({ type: 'error', message: 'Could not validate. Check your connection.' });
     } finally {
       setValidating(false);
-    }
-  };
-
-  const handleVaultSetup = async () => {
-    setInitializing(true);
-    try {
-      const currentPath = await window.nudge.vault.getPath();
-      await window.nudge.vault.initialize(currentPath);
-      setStep('aboutMe');
-    } catch {
-      setStep('aboutMe');
-    } finally {
-      setInitializing(false);
     }
   };
 
@@ -225,17 +224,17 @@ ${aboutSection}
       // Non-blocking — vault may not be ready
     }
     await window.nudge.settings.set('onboardingComplete', true);
-    onComplete();
+
+    // Show toast then transition
+    setShowToast(true);
+    setTimeout(() => {
+      onComplete();
+    }, 1500);
   };
 
-  const renderDots = () => (
-    <div className="onboarding-progress">
-      {STEPS.map((s, i) => (
-        <div
-          key={s}
-          className={`onboarding-dot ${i === currentIndex ? 'onboarding-dot--active' : ''} ${i < currentIndex ? 'onboarding-dot--done' : ''}`}
-        />
-      ))}
+  const renderStepIndicator = () => (
+    <div className="onboarding-step-indicator">
+      Step {currentIndex + 1} of {STEPS.length}
     </div>
   );
 
@@ -264,6 +263,11 @@ ${aboutSection}
 
   return (
     <div className="onboarding">
+      {showToast && (
+        <div className="onboarding-toast">
+          You're all set! Nudge is ready.
+        </div>
+      )}
       <div className="onboarding-card">
         {step === 'welcome' && (
           <div className="onboarding-step">
@@ -278,7 +282,7 @@ ${aboutSection}
             <button className="onboarding-btn onboarding-btn--primary" onClick={() => setStep('provider')}>
               Get Started
             </button>
-            {renderDots()}
+            {renderStepIndicator()}
           </div>
         )}
 
@@ -311,7 +315,7 @@ ${aboutSection}
                 Continue <span className="onboarding-nav-arrow">&rarr;</span>
               </button>
             </div>
-            {renderDots()}
+            {renderStepIndicator()}
           </div>
         )}
 
@@ -319,7 +323,7 @@ ${aboutSection}
           <div className="onboarding-step">
             <h1 className="onboarding-heading">Connect to {PROVIDER_OPTIONS.find((p) => p.id === selectedProvider)?.name}</h1>
             <p className="onboarding-text">
-              Enter your API key to get started. You can change providers later in Settings.
+              Enter your API key to get started. Your vault will be set up automatically at ~/Nudge/ (you can change it later in Settings).
             </p>
             {PROVIDER_KEY_INFO[selectedProvider].linkUrl && (
               <a
@@ -403,116 +407,108 @@ ${aboutSection}
                 {validating ? 'Validating...' : 'Validate & Continue'} <span className="onboarding-nav-arrow">&rarr;</span>
               </button>
             </div>
-            {renderDots()}
+            {renderStepIndicator()}
           </div>
         )}
 
-        {step === 'vault' && (
-          <div className="onboarding-step">
-            <h1 className="onboarding-heading">Choose your vault location</h1>
-            <p className="onboarding-text">
-              Your vault is where Nudge stores your ideas, daily logs, and tasks. Everything stays on your machine.
-            </p>
-            <div className="onboarding-vault-path">~/Nudge/</div>
-            <div className="onboarding-wizard-nav">
-              <button className="onboarding-nav-btn onboarding-nav-btn--back" onClick={goBack}>
-                <span className="onboarding-nav-arrow">&larr;</span> Back
-              </button>
-              <button
-                className="onboarding-btn onboarding-btn--primary onboarding-btn--nav"
-                onClick={handleVaultSetup}
-                disabled={initializing}
-              >
-                {initializing ? 'Setting up...' : 'Use Default'} <span className="onboarding-nav-arrow">&rarr;</span>
-              </button>
-            </div>
-            {renderDots()}
-          </div>
-        )}
+        {/* --- About You: merged aboutMe + energy + preferences with collapsible sections --- */}
 
-        {/* --- Profile Wizard Steps --- */}
-
-        {step === 'aboutMe' && (
+        {step === 'aboutYou' && (
           <div className="onboarding-step">
-            <h1 className="onboarding-heading">Tell Nudge about yourself</h1>
+            <h1 className="onboarding-heading">About You</h1>
             <p className="onboarding-text">
-              What do you do? How do you work best? This helps Nudge tailor its suggestions to you.
+              Help Nudge understand how you work. Expand any section to fill in details.
             </p>
-            <div className="onboarding-input-group">
-              <textarea
-                className="onboarding-textarea"
-                value={aboutMe}
-                onChange={(e) => setAboutMe(e.target.value)}
-                placeholder="e.g. I'm a software developer who works best in short focused bursts. I like to have a clear list of what to do next."
-                rows={4}
-              />
-            </div>
-            {renderWizardNav()}
-            {renderDots()}
-          </div>
-        )}
 
-        {step === 'energy' && (
-          <div className="onboarding-step">
-            <h1 className="onboarding-heading">Your energy patterns</h1>
-            <p className="onboarding-text">
-              When during the day do you have the most energy? Nudge can suggest tasks that match your rhythm.
-            </p>
-            <div className="onboarding-energy-grid">
-              {([
-                { label: 'Morning', value: energyMorning, setter: setEnergyMorning },
-                { label: 'Afternoon', value: energyAfternoon, setter: setEnergyAfternoon },
-                { label: 'Evening', value: energyEvening, setter: setEnergyEvening },
-              ] as const).map(({ label, value, setter }) => (
-                <div key={label} className="onboarding-energy-row">
-                  <span className="onboarding-energy-label">{label}</span>
-                  <div className="onboarding-energy-options">
-                    {ENERGY_OPTIONS.map((opt) => (
-                      <button
-                        key={opt}
-                        className={`onboarding-energy-btn ${value === opt ? 'onboarding-energy-btn--active' : ''}`}
-                        onClick={() => setter(opt)}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+            <div className="onboarding-collapsible-sections">
+              {/* About Me section */}
+              <div className="onboarding-collapsible">
+                <button className="onboarding-collapsible-header" onClick={() => toggleSection('about')}>
+                  <span className="onboarding-collapsible-title">About Me</span>
+                  <span className={`onboarding-collapsible-arrow ${expandedSections.about ? 'onboarding-collapsible-arrow--open' : ''}`}>&#9662;</span>
+                </button>
+                {expandedSections.about && (
+                  <div className="onboarding-collapsible-body">
+                    <textarea
+                      className="onboarding-textarea"
+                      value={aboutMe}
+                      onChange={(e) => setAboutMe(e.target.value)}
+                      placeholder="e.g. I'm a software developer who works best in short focused bursts. I like to have a clear list of what to do next."
+                      rows={3}
+                    />
                   </div>
-                </div>
-              ))}
-            </div>
-            {renderWizardNav()}
-            {renderDots()}
-          </div>
-        )}
+                )}
+              </div>
 
-        {step === 'preferences' && (
-          <div className="onboarding-step">
-            <h1 className="onboarding-heading">How can Nudge help?</h1>
-            <p className="onboarding-text">
-              Everyone gets stuck sometimes. Let Nudge know what works for you.
-            </p>
-            <div className="onboarding-input-group">
-              <label className="onboarding-input-label">What helps when you're stuck?</label>
-              <input
-                className="onboarding-input"
-                type="text"
-                value={helpWhenStuck}
-                onChange={(e) => setHelpWhenStuck(e.target.value)}
-                placeholder="e.g. Breaking things into tiny steps, body doubling, changing scenery"
-              />
+              {/* Energy Patterns section */}
+              <div className="onboarding-collapsible">
+                <button className="onboarding-collapsible-header" onClick={() => toggleSection('energy')}>
+                  <span className="onboarding-collapsible-title">Energy Patterns</span>
+                  <span className={`onboarding-collapsible-arrow ${expandedSections.energy ? 'onboarding-collapsible-arrow--open' : ''}`}>&#9662;</span>
+                </button>
+                {expandedSections.energy && (
+                  <div className="onboarding-collapsible-body">
+                    <div className="onboarding-energy-grid">
+                      {([
+                        { label: 'Morning', value: energyMorning, setter: setEnergyMorning },
+                        { label: 'Afternoon', value: energyAfternoon, setter: setEnergyAfternoon },
+                        { label: 'Evening', value: energyEvening, setter: setEnergyEvening },
+                      ] as const).map(({ label, value, setter }) => (
+                        <div key={label} className="onboarding-energy-row">
+                          <span className="onboarding-energy-label">{label}</span>
+                          <div className="onboarding-energy-options">
+                            {ENERGY_OPTIONS.map((opt) => (
+                              <button
+                                key={opt}
+                                className={`onboarding-energy-btn ${value === opt ? 'onboarding-energy-btn--active' : ''}`}
+                                onClick={() => setter(opt)}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Preferences section */}
+              <div className="onboarding-collapsible">
+                <button className="onboarding-collapsible-header" onClick={() => toggleSection('preferences')}>
+                  <span className="onboarding-collapsible-title">Preferences</span>
+                  <span className={`onboarding-collapsible-arrow ${expandedSections.preferences ? 'onboarding-collapsible-arrow--open' : ''}`}>&#9662;</span>
+                </button>
+                {expandedSections.preferences && (
+                  <div className="onboarding-collapsible-body">
+                    <div className="onboarding-input-group">
+                      <label className="onboarding-input-label">What helps when you're stuck?</label>
+                      <input
+                        className="onboarding-input"
+                        type="text"
+                        value={helpWhenStuck}
+                        onChange={(e) => setHelpWhenStuck(e.target.value)}
+                        placeholder="e.g. Breaking things into tiny steps, body doubling, changing scenery"
+                      />
+                    </div>
+                    <div className="onboarding-input-group" style={{ marginTop: 12 }}>
+                      <label className="onboarding-input-label">Preferred suggestion style</label>
+                      <input
+                        className="onboarding-input"
+                        type="text"
+                        value={suggestionStyle}
+                        onChange={(e) => setSuggestionStyle(e.target.value)}
+                        placeholder="e.g. Gentle nudges, direct to-do lists, playful encouragement"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="onboarding-input-group">
-              <label className="onboarding-input-label">Preferred suggestion style</label>
-              <input
-                className="onboarding-input"
-                type="text"
-                value={suggestionStyle}
-                onChange={(e) => setSuggestionStyle(e.target.value)}
-                placeholder="e.g. Gentle nudges, direct to-do lists, playful encouragement"
-              />
-            </div>
+
             {renderWizardNav()}
-            {renderDots()}
+            {renderStepIndicator()}
           </div>
         )}
 
@@ -532,7 +528,7 @@ ${aboutSection}
               />
             </div>
             {renderWizardNav()}
-            {renderDots()}
+            {renderStepIndicator()}
           </div>
         )}
 
@@ -551,24 +547,8 @@ ${aboutSection}
                 placeholder="Starting is success, completion is optional."
               />
             </div>
-            {renderWizardNav({ nextLabel: 'Finish', hideSkip: true })}
-            {renderDots()}
-          </div>
-        )}
-
-        {step === 'ready' && (
-          <div className="onboarding-step">
-            <h1 className="onboarding-heading">You're all set!</h1>
-            <p className="onboarding-text">
-              Nudge is ready. Start a conversation whenever you're ready.
-            </p>
-            <p className="onboarding-text onboarding-text--hint">
-              You can always update your profile later by editing <strong>config.md</strong> in your vault.
-            </p>
-            <button className="onboarding-btn onboarding-btn--primary" onClick={handleComplete}>
-              Start Chatting
-            </button>
-            {renderDots()}
+            {renderWizardNav({ nextLabel: 'Finish', onNext: handleComplete, hideSkip: true })}
+            {renderStepIndicator()}
           </div>
         )}
       </div>

@@ -1,24 +1,26 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ChatMessage } from '../shared/types';
+import { ChatMessage, Session } from '../shared/types';
 import ChatPanel from './components/ChatPanel';
-import FileExplorer from './components/FileExplorer';
 import FileEditor from './components/FileEditor';
 import Settings from './components/Settings';
 import Onboarding from './components/Onboarding';
 import Header from './components/Header';
+import Sidebar from './components/Sidebar';
 import './styles/App.css';
 
 export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
-  const [explorerOpen, setExplorerOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [theme, setTheme] = useState<string>('system');
   const [hasUpdate, setHasUpdate] = useState(false);
+  const [sessionTitle, setSessionTitle] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const cancelStreamRef = useRef<(() => void) | null>(null);
   const streamingContentRef = useRef('');
 
@@ -35,7 +37,8 @@ export default function App() {
       }
 
       if (complete) {
-        await startNewSession();
+        await resumeOrStartSession();
+        await checkWhatsNew();
       }
     }
     init();
@@ -69,6 +72,37 @@ export default function App() {
     return cleanup;
   }, []);
 
+  // Listen for nudge events
+  useEffect(() => {
+    const cleanupFired = window.nudge.nudges.onFired(() => {
+      // Refresh session list so the new nudge session appears
+      setSessionRefreshKey(k => k + 1);
+    });
+
+    const cleanupNavigate = window.nudge.nudges.onNavigate(async (data) => {
+      // Navigate to the nudge session when notification is clicked
+      const session = await window.nudge.sessions.get(data.sessionId);
+      if (session) {
+        if (cancelStreamRef.current) {
+          cancelStreamRef.current();
+        }
+        setCurrentSessionId(session.id);
+        setMessages(session.messages);
+        setSessionTitle(session.title);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+        setIsStreaming(false);
+        setEditingFile(null);
+        setSessionRefreshKey(k => k + 1);
+      }
+    });
+
+    return () => {
+      cleanupFired();
+      cleanupNavigate();
+    };
+  }, []);
+
   function applyTheme(t: string) {
     if (t === 'system') {
       document.documentElement.removeAttribute('data-theme');
@@ -77,13 +111,78 @@ export default function App() {
     }
   }
 
+  async function checkWhatsNew() {
+    try {
+      const currentVersion = await window.nudge.app.getVersion();
+      const lastSeenVersion = await window.nudge.settings.get('lastSeenVersion');
+      if (lastSeenVersion === currentVersion) return;
+
+      const whatsNew = await window.nudge.app.getWhatsNew();
+      if (!whatsNew) {
+        await window.nudge.settings.set('lastSeenVersion', currentVersion);
+        return;
+      }
+
+      // Inject as an assistant message in the current session
+      const message: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: whatsNew,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, message]);
+      if (currentSessionId) {
+        await window.nudge.sessions.addMessage(currentSessionId, message);
+      }
+      await window.nudge.settings.set('lastSeenVersion', currentVersion);
+    } catch {}
+  }
+
   async function startNewSession() {
     const session = await window.nudge.sessions.create();
     setCurrentSessionId(session.id);
+    setSessionTitle('');
     setMessages([]);
     setStreamingContent('');
     streamingContentRef.current = '';
     setIsStreaming(false);
+    setSessionRefreshKey(k => k + 1);
+  }
+
+  async function resumeOrStartSession() {
+    const sessions = await window.nudge.sessions.list();
+    if (sessions.length > 0) {
+      // Sessions are sorted by updatedAt desc — resume the most recent one
+      const latest = sessions[0];
+      const full = await window.nudge.sessions.get(latest.id);
+      if (full) {
+        setCurrentSessionId(full.id);
+        setMessages(full.messages);
+        setSessionTitle(full.title);
+        setStreamingContent('');
+        streamingContentRef.current = '';
+        setIsStreaming(false);
+        setSessionRefreshKey(k => k + 1);
+        return;
+      }
+    }
+    await startNewSession();
+  }
+
+  async function handleSelectSession(session: Session) {
+    if (session.id === currentSessionId) return;
+    if (cancelStreamRef.current) {
+      cancelStreamRef.current();
+    }
+    const full = await window.nudge.sessions.get(session.id);
+    if (full) {
+      setCurrentSessionId(full.id);
+      setMessages(full.messages);
+      setStreamingContent('');
+      streamingContentRef.current = '';
+      setIsStreaming(false);
+      setEditingFile(null);
+    }
   }
 
   async function buildSystemPrompt(): Promise<string> {
@@ -135,6 +234,10 @@ export default function App() {
     // Save user message to session
     if (currentSessionId) {
       await window.nudge.sessions.addMessage(currentSessionId, userMessage);
+      // Update title on first user message (backend sets title to first 50 chars)
+      if (messages.length === 0) {
+        setSessionTitle(content.trim().slice(0, 50));
+      }
     }
 
     try {
@@ -250,41 +353,48 @@ export default function App() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="skip-to-content">Skip to content</a>
       <Header
-        onToggleExplorer={() => setExplorerOpen(!explorerOpen)}
+        onToggleExplorer={() => setSidebarOpen(!sidebarOpen)}
         onOpenSettings={() => setSettingsOpen(true)}
         onNewChat={handleNewChat}
-        explorerOpen={explorerOpen}
+        explorerOpen={sidebarOpen}
         hasUpdate={hasUpdate}
+        sessionTitle={sessionTitle}
       />
 
       <div className="app-body">
-        {explorerOpen && (
-          <FileExplorer
-            isOpen={explorerOpen}
-            onClose={() => setExplorerOpen(false)}
+        {sidebarOpen && (
+          <Sidebar
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            currentSessionId={currentSessionId}
+            onSelectSession={handleSelectSession}
+            onNewChat={handleNewChat}
             onFileSelect={(path) => setEditingFile(path)}
             editingFile={editingFile}
+            sessionRefreshKey={sessionRefreshKey}
           />
         )}
 
-        <div className="app-main">
-          {editingFile ? (
-            <FileEditor
-              filePath={editingFile}
-              onClose={() => setEditingFile(null)}
+        <main id="main-content" className={`app-main ${editingFile ? 'app-main--split' : ''}`}>
+          <div className="app-chat-container">
+            <ChatPanel
+              messages={messages}
+              isStreaming={isStreaming}
+              streamingContent={streamingContent}
+              onSendMessage={handleSendMessage}
             />
-          ) : (
-            <div className="app-chat-container">
-              <ChatPanel
-                messages={messages}
-                isStreaming={isStreaming}
-                streamingContent={streamingContent}
-                onSendMessage={handleSendMessage}
+          </div>
+          {editingFile && (
+            <div className="app-editor-pane">
+              <FileEditor
+                filePath={editingFile}
+                onClose={() => setEditingFile(null)}
               />
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       <Settings

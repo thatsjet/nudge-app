@@ -29,14 +29,21 @@
 
 .chat-panel-empty-logo {
   color: var(--accent);
-  opacity: 0.6;
+  opacity: 0.8;
   margin-bottom: 4px;
 }
 
 .chat-panel-empty-title {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 500;
   color: var(--text-secondary);
+}
+
+.chat-panel-empty-mantra {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: -4px 0 0;
 }
 
 .chat-panel-empty-chips {
@@ -51,7 +58,7 @@
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 20px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   background: var(--bg-primary);
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;

@@ -22,6 +22,8 @@ export interface Session {
   title: string;
   createdAt: number;
   updatedAt: number;
+  starred?: boolean;
+  messageCount?: number;
   messages: ChatMessage[];
 }
 
@@ -57,14 +59,29 @@ export type UpdateStatus =
   | { state: 'error'; message: string };
 
 export interface ToolUseRequest {
-  name: 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'create_file' | 'move_file' | 'archive_tasks';
+  name: 'read_file' | 'write_file' | 'edit_file' | 'list_files' | 'create_file' | 'move_file' | 'archive_tasks' | 'update_nudge_settings';
   input: Record<string, string>;
+}
+
+export type NudgeType = 'morning' | 'midday' | 'endOfDay';
+
+export interface NudgeConfig {
+  enabled: boolean;
+  time: string; // "HH:MM" 24-hour format
+}
+
+export interface NudgeSettings {
+  morning: NudgeConfig;
+  midday: NudgeConfig;
+  endOfDay: NudgeConfig;
+  doNotDisturb: boolean;
 }
 
 export interface NudgeAPI {
   app: {
     getSystemPrompt: () => Promise<string>;
     getVersion: () => Promise<string>;
+    getWhatsNew: () => Promise<string | null>;
     onMenuSave: (callback: () => void) => () => void;
     onCheckForUpdates: (callback: () => void) => () => void;
   };
@@ -114,6 +131,12 @@ export interface NudgeAPI {
     get: (id: string) => Promise<Session | null>;
     create: () => Promise<Session>;
     addMessage: (sessionId: string, message: ChatMessage) => Promise<void>;
+    update: (sessionId: string, updates: Partial<Pick<Session, 'title' | 'starred'>>) => Promise<void>;
+    delete: (sessionId: string) => Promise<void>;
+  };
+  nudges: {
+    onFired: (callback: (data: { sessionId: string; type: string }) => void) => () => void;
+    onNavigate: (callback: (data: { sessionId: string }) => void) => () => void;
   };
 }
 
